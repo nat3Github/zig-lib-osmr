@@ -1,47 +1,16 @@
 .{
-    // This is the default name used by packages depending on this one. For
-    // example, when a user runs `zig fetch --save <url>`, this field is used
-    // as the key in the `dependencies` table. Although the user can choose a
-    // different name, most users will stick with this provided value.
-    //
-    // It is redundant to include "zig" in this name because it is already
-    // within the Zig package namespace.
     .name = .osmr,
-    // .fingerprint = 0x4cd0d36efc783879,
+    .fingerprint = 0x7aeeebba704b9266,
 
-    // This is a [Semantic Version](https://semver.org/).
-    // In a future version of Zig it will be used for package deduplication.
     .version = "0.0.0",
 
-    // This field is optional.
-    // This is currently advisory only; Zig does not yet do anything
-    // with this value.
     //.minimum_zig_version = "0.11.0",
 
-    // This field is optional.
-    // Each dependency must either provide a `url` and `hash`, or a `path`.
-    // `zig build --fetch` can be used to fetch all dependencies of a package, recursively.
-    // Once all dependencies are fetched, `zig build` no longer requires
-    // internet connectivity.
-    // .dependencies = .{
-    //     .string = .{
-    //         .url = "https://github.com/JakubSzark/zig-string/archive/refs/heads/master.tar.gz",
-    //     },
-    // },
-
-    // Specifies the set of files and directories that are included in this package.
-    // Only files and directories listed here are included in the `hash` that
-    // is computed for this package. Only files listed here will remain on disk
-    // when using the zig package manager. As a rule of thumb, one should list
-    // files required for compilation plus any license(s).
-    // Paths are relative to the build root. Use the empty string (`""`) to refer to
-    // the build root itself.
-    // A directory listed here means that all files within, recursively, are included.
     .dependencies = .{
-        // .@"ssz.zig" = .{
-        //     .url = "https://github.com/blockblaz/ssz.zig/archive/03985d5743a8b4057f4722c2c80beb67c4802b6d.tar.gz",
-        //     .hash = "12205edd9484a4d1988afcf29010cd04102ea81da3d0ddf7244c55a75258aa844201",
-        // },
+        .protobuf = .{
+            .url = "https://github.com/Arwalk/zig-protobuf/archive/27f8910aac3840722817d0bd56750916afd619a4.tar.gz",
+            .hash = "protobuf-2.0.0-0e82aqCZGwCTEk11MsgMiy1G4ZP2Q1QKX4QJ9dqfF_M6",
+        },
     },
     .paths = .{
         "build.zig",
