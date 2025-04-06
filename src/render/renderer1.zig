@@ -10,67 +10,125 @@ const Feature = dec.Feature;
 
 const This = @This();
 const Traverser = dec.LayerTraverser(This);
+const Cmd = dec.Cmd;
 
 const WRender = struct {
+    const Type = enum {
+        Polygon,
+        LineString,
+    };
+    x: i32 = 0,
+    y: i32 = 0,
     extent: u32,
-    ctx: z2d.Context,
-    pub fn render_geometry(self: *WRender, cmd_buffer: []u32) void {
+    ctx: *z2d.Context,
+    rtype: Type = .Polygon,
+    pub fn render_geometry(
+        self: *WRender,
+        cmd_buffer: []u32,
+    ) void {
         Cmd.decode(
             cmd_buffer,
             self,
             close_path,
             move_to,
             line_to,
-        );
+        ) catch |e| {
+            std.log.err("cmd decode error: {}", .{e});
+            return;
+        };
+        switch (self.rtype) {
+            .Polygon => {},
+            .LineString => {
+                self.ctx.stroke() catch {};
+            },
+        }
     }
     fn close_path(self: *WRender) void {
+        // std.log.warn("close path", .{});
         self.ctx.closePath() catch {};
+        switch (self.rtype) {
+            .Polygon => {
+                self.ctx.fill() catch {};
+            },
+            .LineString => {
+                self.ctx.stroke() catch {};
+            },
+        }
     }
     fn move_to(self: *WRender, x: i32, y: i32) void {
-        const xy = self.convert(x, y);
-        self.ctx.moveTo(@floatFromInt(xy.x), @floatFromInt(xy.y)) catch {};
+        self.set_xy(x, y);
+        const mx, const my = self.get_xy_f64();
+        self.ctx.moveTo(mx, my) catch {};
+        // std.log.warn("moved to x: {d:.0}, y: {d:.0}", .{ mx, my });
     }
     fn line_to(self: *WRender, x: i32, y: i32) void {
-        const xy = self.convert(x, y);
-        self.ctx.lineTo(@floatFromInt(xy.x), @floatFromInt(xy.y)) catch {};
+        self.add_xy(x, y);
+        const mx, const my = self.get_xy_f64();
+        self.ctx.lineTo(mx, my) catch {};
+        // std.log.warn("line to x: {d:.0}, y: {d:.0}", .{ mx, my });
     }
-    fn convert(self: *WRender, x: i32, y: i32) struct { x: i32, y: i32 } {
+
+    inline fn clamped_xy(self: *WRender, x: i32, y: i32) struct { i32, i32 } {
         const img_width = self.ctx.surface.getWidth();
-        const xa = tile2img(x, self.extent, img_width);
-        const ya = tile2img(y, self.extent, img_width);
-        return .{
-            .x = xa,
-            .y = ya,
-        };
+        const clampedx = std.math.clamp(x, 0, img_width - 1);
+        const clampedy = std.math.clamp(y, 0, img_width - 1);
+        return .{ clampedx, clampedy };
     }
-    fn tile2img(tile_coord: i32, extent: i32, image_size: i32) i32 {
-        return (tile_coord * image_size) / extent;
+    inline fn convert_and_clamp(self: *WRender, x: i32, y: i32) struct { i32, i32 } {
+        const img_width = self.ctx.surface.getWidth();
+        const extent_signed: i32 = @intCast(self.extent);
+        const xa = tile2img(x, extent_signed, img_width);
+        const ya = tile2img(y, extent_signed, img_width);
+        return self.clamped_xy(xa, ya);
+    }
+    inline fn get_xy_f64(self: *WRender) struct { f64, f64 } {
+        const x, const y = self.convert_and_clamp(self.x, self.y);
+        return .{ @floatFromInt(x), @floatFromInt(y) };
+    }
+    inline fn set_xy(self: *WRender, x: i32, y: i32) void {
+        self.x = x;
+        self.y = y;
+    }
+    inline fn add_xy(self: *WRender, x: i32, y: i32) void {
+        self.x += x;
+        self.y += y;
+    }
+    inline fn tile2img(tile_coord: i32, extent: i32, image_size: i32) i32 {
+        if (extent == 0) return 0;
+        return @divTrunc((tile_coord * image_size), extent);
     }
 };
 
 alloc: Allocator,
 surface0: z2d.Surface,
-context0: z2d.Context,
+context0: z2d.Context = undefined,
+counter: usize = 2,
 
 pub fn init(alloc: Allocator, width_height: u32) !This {
-    const sfc = try z2d.Surface.init(
-        .image_surface_rgb,
-        alloc,
-        @intCast(width_height),
-        @intCast(width_height),
-    );
-    const context = z2d.Context.init(alloc, sfc);
-    return This{
+    var t = This{
         .alloc = alloc,
-        .surface0 = sfc,
-        .context0 = context,
+        .surface0 = try z2d.Surface.init(
+            .image_surface_rgb,
+            alloc,
+            @intCast(width_height),
+            @intCast(width_height),
+        ),
     };
+    t.context0 = z2d.Context.init(alloc, &t.surface0);
+    return t;
 }
 
 pub fn deinit(self: *This) void {
     const alloc = self.alloc;
     self.surface0.deinit(alloc);
     self.context0.deinit();
+}
+fn get_extent(layer: *const Layer) u32 {
+    const extent = layer.extent orelse {
+        std.log.err("no extent specified", .{});
+        return 4096;
+    };
+    return extent;
 }
 
 pub fn render_aeroway(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Aeroway) void {
@@ -80,29 +138,91 @@ pub fn render_aerodrome_label(self: *This, layer: *const Layer, feat: *const Fea
     _ = .{ feat, self, d, layer };
 }
 pub fn render_boundary(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Boundary) void {
-    _ = .{ feat, self, d, layer };
-    const alloc = self.alloc;
-    const extent = layer.extent orelse {
-        std.log.err("no extent specified", .{});
-        return;
-    };
-    // const geomtype = feat.type orelse .UNKNOWN;
-    const geo = feat.geometry.items;
-    const surface = &self.surface0;
-    var context = z2d.Context.init(alloc, surface);
-    defer context.deinit();
-    const r = WRender{ .ctx = context, .extent = extent };
-    r.render_geometry(geo);
+    if (self.counter == 1) {
+        const alloc = self.alloc;
+        const extent = get_extent(layer);
+        const geomtype = feat.type orelse .UNKNOWN;
+        const geo = feat.geometry.items;
+        std.log.warn("feature {s}, typ: {}, cmdlen: {}", .{ d.class, geomtype, geo.len });
+        var context = z2d.Context.init(alloc, &self.surface0);
+        var r = WRender{ .ctx = &context, .extent = extent };
+        switch (geomtype) {
+            .POINT => std.log.warn("not implemented", .{}),
+            .LINESTRING => {
+                r.rtype = .LineString;
+            },
+            .POLYGON => {
+                r.rtype = .Polygon;
+            },
+            else => return,
+        }
+        context.setSourceToPixel(.{ .rgb = .{ .r = 0xFF, .g = 0xFF, .b = 0x00 } });
+        r.render_geometry(geo);
+    }
 }
 
 pub fn render_building(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Building) void {
-    _ = .{ feat, self, d, layer };
+    if (self.counter == 1) {
+        const alloc = self.alloc;
+        const extent = layer.extent orelse {
+            std.log.err("no extent specified", .{});
+            return;
+        };
+        const geomtype = feat.type orelse .UNKNOWN;
+        const geo = feat.geometry.items;
+        std.log.info("feature {s}, typ: {}, cmdlen: {}", .{ d.colour, geomtype, geo.len });
+        var context = z2d.Context.init(alloc, &self.surface0);
+        var r = WRender{ .ctx = &context, .extent = extent };
+        context.setSourceToPixel(.{ .rgb = .{ .r = 0xFF, .g = 0xFF, .b = 0x00 } });
+        r.render_geometry(geo);
+        context.stroke() catch |e| {
+            std.log.err("failed to draw {}", .{e});
+        };
+    }
 }
 pub fn render_housenumber(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Housenumber) void {
-    _ = .{ feat, self, d, layer };
+    if (self.counter == 1) {
+        const alloc = self.alloc;
+        const extent = layer.extent orelse {
+            std.log.warn("no extent specified", .{});
+            return;
+        };
+        const geomtype = feat.type orelse .UNKNOWN;
+        const geo = feat.geometry.items;
+        std.log.warn("feature {s}, typ: {}, cmdlen: {}", .{ d.housenumber, geomtype, geo.len });
+        var context = z2d.Context.init(alloc, &self.surface0);
+        var r = WRender{ .ctx = &context, .extent = extent };
+        context.setSourceToPixel(.{ .rgb = .{ .r = 0xFF, .g = 0xFF, .b = 0x00 } });
+        r.render_geometry(geo);
+        context.stroke() catch |e| {
+            std.log.err("failed to draw {}", .{e});
+        };
+    }
 }
 pub fn render_landcover(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Landcover) void {
-    _ = .{ feat, self, d, layer };
+    if (self.counter > 0) {
+        const alloc = self.alloc;
+        const extent = get_extent(layer);
+        const geomtype = feat.type orelse .UNKNOWN;
+        const geo = feat.geometry.items;
+        std.log.warn("feature {s}, typ: {}, cmdlen: {}", .{ d.class, geomtype, geo.len });
+        var context = z2d.Context.init(alloc, &self.surface0);
+        defer context.deinit();
+        var r = WRender{ .ctx = &context, .extent = extent };
+        switch (geomtype) {
+            .POINT => std.log.warn("not implemented", .{}),
+            .LINESTRING => {
+                r.rtype = .LineString;
+            },
+            .POLYGON => {
+                r.rtype = .Polygon;
+            },
+            else => return,
+        }
+        context.setSourceToPixel(.{ .rgb = .{ .r = 0x00, .g = 0xFF, .b = 0x00 } });
+        r.render_geometry(geo);
+    }
+    self.counter += 1;
 }
 pub fn render_landuse(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Landuse) void {
     _ = .{ feat, self, d, layer };
@@ -120,7 +240,27 @@ pub fn render_poi(self: *This, layer: *const Layer, feat: *const Feature, d: *co
     _ = .{ feat, self, d, layer };
 }
 pub fn render_transportation(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Transportation) void {
-    _ = .{ feat, self, d, layer };
+    if (self.counter == 1) {
+        const alloc = self.alloc;
+        const extent = get_extent(layer);
+        const geomtype = feat.type orelse .UNKNOWN;
+        const geo = feat.geometry.items;
+        std.log.warn("feature {s}, typ: {}, cmdlen: {}", .{ d.class, geomtype, geo.len });
+        var context = z2d.Context.init(alloc, &self.surface0);
+        var r = WRender{ .ctx = &context, .extent = extent };
+        switch (geomtype) {
+            .POINT => std.log.warn("not implemented", .{}),
+            .LINESTRING => {
+                r.rtype = .LineString;
+            },
+            .POLYGON => {
+                r.rtype = .Polygon;
+            },
+            else => return,
+        }
+        context.setSourceToPixel(.{ .rgb = .{ .r = 0xFF, .g = 0xFF, .b = 0x00 } });
+        r.render_geometry(geo);
+    }
 }
 pub fn render_transportation_name(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Transportation_name) void {
     _ = .{ feat, self, d, layer };
@@ -157,82 +297,6 @@ pub fn render(self: *This, tile: *const dec.Tile) void {
     traverser.traverse_tile(tile, self);
 }
 
-const Cmd = enum {
-    None,
-    MoveTo,
-    LineTo,
-    ClosePath,
-
-    fn op_param_count(cmd: *const Cmd) usize {
-        return switch (cmd) {
-            .LineTo => 2,
-            .MoveTo => 2,
-            else => 0,
-        };
-    }
-    fn command_integer(x: u32) struct {
-        cmd: Cmd,
-        count: usize,
-    } {
-        const cmd_id: Cmd = switch (x & 0x7) {
-            1 => .MoveTo,
-            2 => .LineTo,
-            7 => .ClosePath,
-            else => .None,
-        };
-        const count = x >> 3;
-        return .{
-            .cmd = cmd_id,
-            .count = count,
-        };
-    }
-    fn param_integer(x: u32) i32 {
-        return ((x >> 1) ^ (-(x & 1)));
-    }
-    fn decode(
-        geometry: []const u32,
-        user_data: anytype,
-        cb_close_path: *const fn (@TypeOf(user_data)) void,
-        cb_move_to: *const fn (@TypeOf(user_data), i32, i32) void,
-        cb_line_to: *const fn (@TypeOf(user_data), i32, i32) void,
-    ) !void {
-        var idx: usize = 0;
-        var cmdint = command_integer(geometry[0]);
-        const op_count = cmdint.cmd.op_param_count();
-        switch (cmdint.cmd) {
-            .None => return error.InvalidCommandId,
-            .ClosePath => {
-                if (op_count != 0) return error.InvalidOpCount;
-                cb_close_path(user_data);
-            },
-            .MoveTo => {
-                const advance: usize = @intCast(cmdint.count);
-                if (idx + advance * op_count > geometry.len) return error.InvalidEncoding;
-                for (0..advance) |i| {
-                    const s = idx + i * op_count;
-                    const xy = geometry[s .. s + op_count];
-                    const x = param_integer(xy[0]);
-                    const y = param_integer(xy[1]);
-                    cb_move_to(user_data, x, y);
-                }
-                idx += op_count * advance;
-            },
-            .LineTo => {
-                const advance: usize = @intCast(cmdint.count);
-                if (idx + advance * op_count > geometry.len) return error.InvalidEncoding;
-                for (0..advance) |i| {
-                    const s = idx + i * op_count;
-                    const xy = geometry[s .. s + op_count];
-                    const x = param_integer(xy[0]);
-                    const y = param_integer(xy[1]);
-                    cb_line_to(user_data, x, y);
-                }
-                idx += op_count * advance;
-            },
-        }
-    }
-};
-
 test "render 1" {
     const balloc = std.testing.allocator;
     var arena = std.heap.ArenaAllocator.init(balloc);
@@ -242,7 +306,60 @@ test "render 1" {
     const input = try file.reader().readAllAlloc(alloc, 10 * 1024 * 1024);
     const tile: dec.Tile = try dec.decode(input, alloc);
 
-    var rend = try This.init(alloc);
-    defer rend.deinit();
+    var rend = try This.init(alloc, 1024);
     rend.render(&tile);
+
+    try z2d.png_exporter.writeToPNGFile(rend.surface0, "./testdata/surface0.png", .{});
+}
+
+test "render test" {
+    const balloc = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(balloc);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    const width_height = 1024;
+    var sfc = try z2d.Surface.init(
+        .image_surface_rgb,
+        alloc,
+        @intCast(width_height),
+        @intCast(width_height),
+    );
+    var context = z2d.Context.init(alloc, &sfc);
+    context.setSourceToPixel(.{ .rgb = .{ .r = 0xFF, .g = 0xFF, .b = 0x00 } });
+    // [default] (warn): moved to x: 30, y: 692
+    // [default] (warn): line to x: 25, y: 696
+    // [default] (warn): line to x: 0, y: 713
+    // [default] (warn): line to x: 0, y: 717
+    // [default] (warn): line to x: 0, y: 700
+    // [default] (warn): line to x: 6, y: 691
+    // [default] (warn): line to x: 0, y: 678
+    // [default] (warn): line to x: 0, y: 683
+    // [default] (warn): line to x: 0, y: 681
+    // [default] (warn): line to x: 0, y: 680
+    // [default] (warn): line to x: 0, y: 674
+    // [default] (warn): line to x: 0, y: 675
+    // [default] (warn): line to x: 0, y: 651
+    // [default] (warn): line to x: 23, y: 680
+    // [default] (warn): close path
+
+    try context.moveTo(30, 692);
+    try context.lineTo(25, 696);
+    try context.lineTo(0, 713);
+    try context.lineTo(0, 717);
+    try context.lineTo(0, 700);
+    try context.lineTo(6, 691);
+    try context.lineTo(0, 678);
+    try context.lineTo(0, 683);
+    try context.lineTo(0, 681);
+    try context.lineTo(0, 680);
+    try context.lineTo(0, 674);
+    try context.lineTo(0, 675);
+    try context.lineTo(0, 651);
+    try context.lineTo(23, 680);
+    try context.closePath();
+    try context.fill();
+    // context.stroke() catch {};
+
+    try z2d.png_exporter.writeToPNGFile(sfc, "./testdata/surface1.png", .{});
 }

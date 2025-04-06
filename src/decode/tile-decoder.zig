@@ -479,3 +479,149 @@ const LayerEnum = enum {
         };
     }
 };
+
+pub const Cmd = enum {
+    None,
+    MoveTo,
+    LineTo,
+    ClosePath,
+
+    fn op_param_count(cmd: *const Cmd) usize {
+        return switch (cmd.*) {
+            .LineTo => 2,
+            .MoveTo => 2,
+            else => 0,
+        };
+    }
+    fn command_integer(x: u32) struct {
+        cmd: Cmd,
+        count: usize,
+    } {
+        const cmd_id: Cmd = switch (x & 0x7) {
+            1 => .MoveTo,
+            2 => .LineTo,
+            7 => .ClosePath,
+            else => .None,
+        };
+        const count = x >> 3;
+        return .{
+            .cmd = cmd_id,
+            .count = count,
+        };
+    }
+    fn param_integer(x: u32) i32 {
+        const a: i32 = @intCast(x >> 1);
+        const b: i32 = @intCast(x & 1);
+        return a ^ -b;
+    }
+
+    pub fn decode(
+        geometry: []const u32,
+        user_data: anytype,
+        cb_close_path: *const fn (@TypeOf(user_data)) void,
+        cb_move_to: *const fn (@TypeOf(user_data), i32, i32) void,
+        cb_line_to: *const fn (@TypeOf(user_data), i32, i32) void,
+    ) !void {
+        var idx: usize = 0;
+        while (true) {
+            const cmdint = command_integer(geometry[idx]);
+            idx += 1;
+            const op_count = cmdint.cmd.op_param_count();
+            switch (cmdint.cmd) {
+                .None => return error.InvalidCommandId,
+                .ClosePath => {
+                    if (op_count != 0) return error.InvalidOpCount;
+                    cb_close_path(user_data);
+                },
+                .MoveTo => {
+                    const advance: usize = cmdint.count;
+                    if (idx + advance * op_count > geometry.len) return error.InvalidEncoding;
+                    for (0..advance) |i| {
+                        const s = idx + i * op_count;
+                        const xy = geometry[s .. s + op_count];
+                        const x = param_integer(xy[0]);
+                        const y = param_integer(xy[1]);
+                        cb_move_to(user_data, x, y);
+                    }
+                    idx += op_count * advance;
+                },
+                .LineTo => {
+                    const advance: usize = cmdint.count;
+                    if (idx + advance * op_count > geometry.len) return error.InvalidEncoding;
+                    for (0..advance) |i| {
+                        const s = idx + i * op_count;
+                        const xy = geometry[s .. s + op_count];
+                        const x = param_integer(xy[0]);
+                        const y = param_integer(xy[1]);
+                        cb_line_to(user_data, x, y);
+                    }
+                    idx += op_count * advance;
+                },
+            }
+            if (idx >= geometry.len) return;
+        }
+    }
+};
+test "cmd 2" {
+    const x1 = Cmd.param_integer(20); // should give 10;
+    const x2 = Cmd.param_integer(179); // should give -90;
+    try expect(x1 == 10);
+    try expect(x2 == -90);
+}
+
+test "cmd 1" {
+    const geometry: []const u32 = &.{
+        9, // MoveTo 1 point
+        20, // zigzag(10)
+        20,
+        26, // LineTo 3 points
+        180, // zigzag(90)
+        0, // zigzag(0)
+        0, // zigzag(0)
+        180, // zigzag(90)
+        179, // zigzag(-90)
+        0, // zigzag(0)
+        7, // ClosePath
+    };
+    const XX = struct {
+        x: i32 = 0,
+        y: i32 = 0,
+        idx: usize = 0,
+        buf: [100]i32 = undefined,
+        result: []i32 = undefined,
+        const XX = @This();
+        fn print(self: *XX) void {
+            self.buf[self.idx] = self.x;
+            self.buf[self.idx + 1] = self.y;
+            self.idx += 2;
+        }
+        fn close(self: *XX) void {
+            std.log.debug("close", .{});
+            self.print();
+            self.result = self.buf[0..self.idx];
+        }
+        fn move(self: *XX, x: i32, y: i32) void {
+            std.log.debug("move to x: {}, y: {}", .{ x, y });
+            self.x = x;
+            self.y = y;
+            self.print();
+        }
+        fn line(self: *XX, x: i32, y: i32) void {
+            std.log.debug("line to x: {}, y: {}", .{ x, y });
+            self.x += x;
+            self.y += y;
+            self.print();
+        }
+    };
+    var xx = XX{};
+
+    try Cmd.decode(
+        geometry,
+        &xx,
+        XX.close,
+        XX.move,
+        XX.line,
+    );
+    const expected: []const i32 = &.{ 10, 10, 100, 10, 100, 100, 10, 100, 10, 100 };
+    try expect(std.mem.eql(i32, expected, xx.result));
+}
