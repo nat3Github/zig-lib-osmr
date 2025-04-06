@@ -3,6 +3,11 @@ const protobuf = @import("protobuf");
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    const z2d_dep = b.dependency("z2d", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    const z2d_module = z2d_dep.module("z2d");
 
     const protobuf_dep = b.dependency("protobuf", .{
         .target = target,
@@ -23,17 +28,18 @@ pub fn build(b: *std.Build) !void {
 
     const step_test = b.step("test", "Run All Tests in src/test");
 
-    const weather_module = b.addModule("osmr", .{
+    const osmr_module = b.addModule("osmr", .{
         .optimize = optimize,
         .target = target,
         .root_source_file = b.path("src/root.zig"),
     });
-    weather_module.addImport("protobuf", protobuf_module);
+    osmr_module.addImport("protobuf", protobuf_module);
+    osmr_module.addImport("z2d", z2d_module);
 
     const lib_test = b.addTest(.{
         .target = target,
         .optimize = optimize,
-        .root_module = weather_module,
+        .root_module = osmr_module,
     });
     const lib_test_run = b.addRunArtifact(lib_test);
     step_test.dependOn(&lib_test_run.step);

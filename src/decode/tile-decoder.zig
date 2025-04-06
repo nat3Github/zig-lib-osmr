@@ -7,6 +7,7 @@ const protobuf = @import("protobuf");
 pub const Tile = @import("vector_tile.pb.zig").Tile;
 const Value = Tile.Value;
 pub const Layer = Tile.Layer;
+pub const Feature = Tile.Feature;
 
 pub fn decode(input: []const u8, alloc: Allocator) !Tile {
     return try protobuf.pb_decode(Tile, input, alloc);
@@ -24,11 +25,16 @@ test "tile 1" {
     const XX = struct {
         const This = @This();
         alloc: Allocator,
-        fn handle_transportation(self: *This, layer: *const Layer, d: *const Transportation) void {
-            _ = .{layer};
-            std.log.warn("transportation: {s}", .{
-                print_any(d.*, self.alloc) catch "",
-            });
+        fn handle_transportation(self: *This, layer: *const Layer, feat: *const Feature, d: *const Transportation) void {
+            _ = .{
+                layer,
+                feat,
+                d,
+                self,
+            };
+            // std.log.warn("transportation: {s}", .{
+            //     print_any(d.*, self.alloc) catch "",
+            // });
         }
     };
     const XXTraverser = LayerTraverser(XX);
@@ -72,121 +78,105 @@ pub fn print_any(t: anytype, alloc: Allocator) ![]const u8 {
 pub fn LayerTraverser(T: type) type {
     return struct {
         const This = @This();
-        aeroway: ?*const fn (*T, *const Layer, *const Aeroway) void = null,
-        aerodrome_label: ?*const fn (*T, *const Layer, *const Aerodrome_label) void = null,
-        boundary: ?*const fn (*T, *const Layer, *const Boundary) void = null,
-        building: ?*const fn (*T, *const Layer, *const Building) void = null,
-        housenumber: ?*const fn (*T, *const Layer, *const Housenumber) void = null,
-        landcover: ?*const fn (*T, *const Layer, *const Landcover) void = null,
-        landuse: ?*const fn (*T, *const Layer, *const Landuse) void = null,
-        mountain_peak: ?*const fn (*T, *const Layer, *const Mountain_peak) void = null,
-        park: ?*const fn (*T, *const Layer, *const Park) void = null,
-        place: ?*const fn (*T, *const Layer, *const Place) void = null,
-        poi: ?*const fn (*T, *const Layer, *const Poi) void = null,
-        transportation: ?*const fn (*T, *const Layer, *const Transportation) void = null,
-        transportation_name: ?*const fn (*T, *const Layer, *const Transportation_name) void = null,
-        water: ?*const fn (*T, *const Layer, *const Water) void = null,
-        water_name: ?*const fn (*T, *const Layer, *const Water_name) void = null,
-        waterway: ?*const fn (*T, *const Layer, *const Waterway) void = null,
+        aeroway: ?*const fn (*T, *const Layer, *const Feature, *const Aeroway) void = null,
+        aerodrome_label: ?*const fn (*T, *const Layer, *const Feature, *const Aerodrome_label) void = null,
+        boundary: ?*const fn (*T, *const Layer, *const Feature, *const Boundary) void = null,
+        building: ?*const fn (*T, *const Layer, *const Feature, *const Building) void = null,
+        housenumber: ?*const fn (*T, *const Layer, *const Feature, *const Housenumber) void = null,
+        landcover: ?*const fn (*T, *const Layer, *const Feature, *const Landcover) void = null,
+        landuse: ?*const fn (*T, *const Layer, *const Feature, *const Landuse) void = null,
+        mountain_peak: ?*const fn (*T, *const Layer, *const Feature, *const Mountain_peak) void = null,
+        park: ?*const fn (*T, *const Layer, *const Feature, *const Park) void = null,
+        place: ?*const fn (*T, *const Layer, *const Feature, *const Place) void = null,
+        poi: ?*const fn (*T, *const Layer, *const Feature, *const Poi) void = null,
+        transportation: ?*const fn (*T, *const Layer, *const Feature, *const Transportation) void = null,
+        transportation_name: ?*const fn (*T, *const Layer, *const Feature, *const Transportation_name) void = null,
+        water: ?*const fn (*T, *const Layer, *const Feature, *const Water) void = null,
+        water_name: ?*const fn (*T, *const Layer, *const Feature, *const Water_name) void = null,
+        waterway: ?*const fn (*T, *const Layer, *const Feature, *const Waterway) void = null,
 
         pub fn traverse_tile(self: *const This, tile: *const Tile, t: *T) void {
             for (tile.layers.items) |layer| {
                 const en = LayerEnum.init(&layer) catch continue;
                 switch (en) {
                     .aeroway => {
-                        if (self.aeroway) |function| {
-                            const parsed_struct = comptime_parse_struct(Aeroway, &layer);
-                            function(t, &layer, &parsed_struct);
+                        if (self.aeroway) |cb| {
+                            comptime_parse_struct(Aeroway, t, &layer, cb);
                         }
                     },
                     .aerodrome_label => {
-                        if (self.aerodrome_label) |function| {
-                            const parsed_struct = comptime_parse_struct(Aerodrome_label, &layer);
-                            function(t, &layer, &parsed_struct);
+                        if (self.aerodrome_label) |cb| {
+                            comptime_parse_struct(Aerodrome_label, t, &layer, cb);
                         }
                     },
                     .boundary => {
-                        if (self.boundary) |function| {
-                            const parsed_struct = comptime_parse_struct(Boundary, &layer);
-                            function(t, &layer, &parsed_struct);
+                        if (self.boundary) |cb| {
+                            comptime_parse_struct(Boundary, t, &layer, cb);
                         }
                     },
                     .building => {
-                        if (self.building) |function| {
-                            const parsed_struct = comptime_parse_struct(Building, &layer);
-                            function(t, &layer, &parsed_struct);
+                        if (self.building) |cb| {
+                            comptime_parse_struct(Building, t, &layer, cb);
                         }
                     },
                     .housenumber => {
-                        if (self.housenumber) |function| {
-                            const parsed_struct = comptime_parse_struct(Housenumber, &layer);
-                            function(t, &layer, &parsed_struct);
+                        if (self.housenumber) |cb| {
+                            comptime_parse_struct(Housenumber, t, &layer, cb);
                         }
                     },
                     .landcover => {
-                        if (self.landcover) |function| {
-                            const parsed_struct = comptime_parse_struct(Landcover, &layer);
-                            function(t, &layer, &parsed_struct);
+                        if (self.landcover) |cb| {
+                            comptime_parse_struct(Landcover, t, &layer, cb);
                         }
                     },
                     .landuse => {
-                        if (self.landuse) |function| {
-                            const parsed_struct = comptime_parse_struct(Landuse, &layer);
-                            function(t, &layer, &parsed_struct);
+                        if (self.landuse) |cb| {
+                            comptime_parse_struct(Landuse, t, &layer, cb);
                         }
                     },
                     .mountain_peak => {
-                        if (self.mountain_peak) |function| {
-                            const parsed_struct = comptime_parse_struct(Mountain_peak, &layer);
-                            function(t, &layer, &parsed_struct);
+                        if (self.mountain_peak) |cb| {
+                            comptime_parse_struct(Mountain_peak, t, &layer, cb);
                         }
                     },
                     .park => {
-                        if (self.park) |function| {
-                            const parsed_struct = comptime_parse_struct(Park, &layer);
-                            function(t, &layer, &parsed_struct);
+                        if (self.park) |cb| {
+                            comptime_parse_struct(Park, t, &layer, cb);
                         }
                     },
                     .place => {
-                        if (self.place) |function| {
-                            const parsed_struct = comptime_parse_struct(Place, &layer);
-                            function(t, &layer, &parsed_struct);
+                        if (self.place) |cb| {
+                            comptime_parse_struct(Place, t, &layer, cb);
                         }
                     },
                     .poi => {
-                        if (self.poi) |function| {
-                            const parsed_struct = comptime_parse_struct(Poi, &layer);
-                            function(t, &layer, &parsed_struct);
+                        if (self.poi) |cb| {
+                            comptime_parse_struct(Poi, t, &layer, cb);
                         }
                     },
                     .transportation => {
-                        if (self.transportation) |function| {
-                            const parsed_struct = comptime_parse_struct(Transportation, &layer);
-                            function(t, &layer, &parsed_struct);
+                        if (self.transportation) |cb| {
+                            comptime_parse_struct(Transportation, t, &layer, cb);
                         }
                     },
                     .transportation_name => {
-                        if (self.transportation_name) |function| {
-                            const parsed_struct = comptime_parse_struct(Transportation_name, &layer);
-                            function(t, &layer, &parsed_struct);
+                        if (self.transportation_name) |cb| {
+                            comptime_parse_struct(Transportation_name, t, &layer, cb);
                         }
                     },
                     .water => {
-                        if (self.water) |function| {
-                            const parsed_struct = comptime_parse_struct(Water, &layer);
-                            function(t, &layer, &parsed_struct);
+                        if (self.water) |cb| {
+                            comptime_parse_struct(Water, t, &layer, cb);
                         }
                     },
                     .water_name => {
-                        if (self.water_name) |function| {
-                            const parsed_struct = comptime_parse_struct(Water_name, &layer);
-                            function(t, &layer, &parsed_struct);
+                        if (self.water_name) |cb| {
+                            comptime_parse_struct(Water_name, t, &layer, cb);
                         }
                     },
                     .waterway => {
-                        if (self.waterway) |function| {
-                            const parsed_struct = comptime_parse_struct(Waterway, &layer);
-                            function(t, &layer, &parsed_struct);
+                        if (self.waterway) |cb| {
+                            comptime_parse_struct(Waterway, t, &layer, cb);
                         }
                     },
                 }
@@ -318,10 +308,10 @@ const Brunnel = enum {
     ford,
 };
 
-fn comptime_parse_struct(T: type, layer: *const Layer) T {
-    var t = T{};
+pub fn comptime_parse_struct(T: type, tpointer: anytype, layer: *const Layer, callback: *const fn (@TypeOf(tpointer), *const Layer, *const Feature, *const T) void) void {
     const features: []Tile.Feature = layer.features.items;
     for (features) |feature| {
+        var t = T{};
         var it = KViterator.init(layer, &feature);
         while (it.next()) |kv| {
             const fields = @typeInfo(T).@"struct".fields;
@@ -372,8 +362,8 @@ fn comptime_parse_struct(T: type, layer: *const Layer) T {
                 }
             }
         }
+        callback(tpointer, layer, &feature, &t);
     }
-    return t;
 }
 
 /// NOTE: the definition follows the OpenMapTiles Schema (CC-BY) https://openmaptiles.org/schema/

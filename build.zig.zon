@@ -11,6 +11,10 @@
             .url = "https://github.com/Arwalk/zig-protobuf/archive/27f8910aac3840722817d0bd56750916afd619a4.tar.gz",
             .hash = "protobuf-2.0.0-0e82aqCZGwCTEk11MsgMiy1G4ZP2Q1QKX4QJ9dqfF_M6",
         },
+        .z2d = .{
+            .url = "https://github.com/vancluever/z2d/archive/a7a280050f1563bba2e6a63ccf665d457955a77c.tar.gz",
+            .hash = "z2d-0.6.1-j5P_HgOfCgDi_xIlrKU9At7xhaQa-o499MMsmliAcvtR",
+        },
     },
     .paths = .{
         "build.zig",
