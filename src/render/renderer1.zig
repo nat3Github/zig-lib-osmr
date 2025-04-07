@@ -13,6 +13,10 @@ const Traverser = dec.LayerTraverser(This);
 const Cmd = dec.Cmd;
 const color = root.color;
 
+// tailwind colors
+pub const Tailwind = @import("tailwind");
+const Line = root.thickness;
+
 const WRender = struct {
     const Type = enum {
         Polygon,
@@ -110,17 +114,21 @@ const toggle_aerodrome_label = false;
 const toggle_boundary = false;
 const toggle_building = false;
 const toggle_housenumber = false;
-const toggle_landcover = false;
+
+const toggle_landcover = true;
 const toggle_landuse = false;
+
 const toggle_mountain_peak = false;
 const toggle_park = false;
 const toggle_place = false;
 const toggle_poi = false;
+
 const toggle_transportation = true;
-const toggle_transportation_name = false;
-const toggle_water = false;
+const toggle_transportation_name = true;
+
+const toggle_water = true;
+const toggle_waterway = true;
 const toggle_water_name = false;
-const toggle_waterway = false;
 
 pub fn init(alloc: Allocator, width_height: u32) !This {
     var t = This{
@@ -142,7 +150,7 @@ pub fn deinit(self: *This) void {
     self.context0.deinit();
 }
 
-pub fn draw(self: *This, layer: *const Layer, feat: *const Feature, col: color, surface: *z2d.Surface) void {
+inline fn draw(self: *This, layer: *const Layer, feat: *const Feature, col: color, line_width: f64, surface: *z2d.Surface) void {
     const alloc = self.alloc;
     const extent = get_extent(layer);
     const geomtype = feat.type orelse .UNKNOWN;
@@ -154,9 +162,11 @@ pub fn draw(self: *This, layer: *const Layer, feat: *const Feature, col: color, 
         .POINT => std.log.warn("not implemented", .{}),
         .LINESTRING => {
             ren.rtype = .LineString;
+            context.setLineWidth(line_width);
         },
         .POLYGON => {
             ren.rtype = .Polygon;
+            context.setLineWidth(line_width);
         },
         else => return,
     }
@@ -183,32 +193,36 @@ pub fn render_boundary(self: *This, layer: *const Layer, feat: *const Feature, d
     _ = .{ feat, self, d, layer };
 }
 pub fn render_building(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Building) void {
-    _ = .{ feat, self, d, layer };
+    if (toggle_building) {
+        const Keys = struct {
+            pub const cyan100 = &.{"ice"};
+            pub const zinc500 = &.{"rock"};
+            pub const green500 = &.{"wood"};
+            pub const lime300 = &.{"grass"};
+            pub const yellow200 = &.{"sand"};
+            pub const lime500 = &.{"farmland"};
+            pub const lime700 = &.{"wetland"};
+        };
+        const col = color.ColorMap(Keys, Tailwind).map(d.class) orelse color.from_hex(Tailwind.green300);
+        self.draw(layer, feat, col, 1.0, &self.surface0);
+    }
 }
 pub fn render_housenumber(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Housenumber) void {
     _ = .{ feat, self, d, layer };
 }
 pub fn render_landcover(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Landcover) void {
     if (toggle_landcover) {
-        const LandCoverColors = struct {
-            pub const dark_green = color.TreesAndNature.dark_green;
-            pub const green = color.TreesAndNature.light_green; //Green.grass;
-            pub const yellow = color.Nature.ocker;
-            pub const brown = color.Nature.brown;
-            pub const white = color.Aquatic.white;
-            pub const gray = color.Gray.light_gray;
+        const Keys = struct {
+            pub const cyan100 = &.{"ice"};
+            pub const zinc500 = &.{"rock"};
+            pub const green500 = &.{"wood"};
+            pub const lime300 = &.{"grass"};
+            pub const yellow200 = &.{"sand"};
+            pub const lime500 = &.{"farmland"};
+            pub const lime700 = &.{"wetland"};
         };
-        const LandCoverKeyMap = struct {
-            pub const white = &.{"ice"};
-            pub const gray = &.{"rock"};
-            pub const dark_green = &.{"wood"};
-            pub const green = &.{"grass"};
-            pub const yellow = &.{"sand"};
-            pub const brown = &.{ "wetland", "farmland" };
-        };
-        const Col = color.ColorMap(LandCoverKeyMap, LandCoverColors);
-        const col = Col.map(d.class) orelse color.from_hex(LandCoverColors.green);
-        self.draw(layer, feat, col, &self.surface0);
+        const col = color.ColorMap(Keys, Tailwind).map(d.class) orelse color.from_hex(Tailwind.green300);
+        self.draw(layer, feat, col, 1.0, &self.surface0);
     }
 }
 
@@ -229,8 +243,97 @@ pub fn render_poi(self: *This, layer: *const Layer, feat: *const Feature, d: *co
 }
 pub fn render_transportation(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Transportation) void {
     if (toggle_transportation) {
+        const Keys = struct {
+            pub const violet800 = &.{
+                "motorway",
+                "trunk",
+                "motorway_construction",
+                "trunk_construction",
+            };
+            pub const slate800 = &.{
+                "primary",
+                "secondary",
+                "tertiary",
+                "primary_construction",
+                "secondary_construction",
+                "tertiary_construction",
+            };
+            pub const gray700 = &.{
+                "minor",
+                "service",
+                "minor_construction",
+                "service_construction",
+            };
+            pub const stone600 = &.{
+                "path",
+                "track",
+                "raceway",
+                "path_construction",
+                "track_construction",
+                "raceway_construction",
+                "bridge",
+                "pier",
+            };
+            pub const rose800 = &.{
+                "transit",
+                "busway",
+                "bus_guideway",
+                "ferry",
+            };
+        };
+        const Thickness = struct {
+            pub const xxl = &.{
+                "motorway",
+                "trunk",
+                "motorway_construction",
+                "trunk_construction",
+                "primary",
+                "primary_construction",
+                "transit",
+            };
+            pub const xl = &.{
+                "secondary",
+                "secondary_construction",
+                "tertiary",
+                "tertiary_construction",
+                "ferry",
+            };
+            pub const l = &.{
+                "minor",
+                "service",
+                "minor_construction",
+                "service_construction",
+                "busway",
+                "bus_guideway",
+                "bridge",
+                "pier",
+            };
+            pub const s = &.{
+                "path",
+                "path_construction",
+                "track",
+                "track_construction",
+                "raceway",
+                "raceway_construction",
+            };
+        };
+        const linewidth = Line.line_width(Thickness, d.class) orelse return self.log_any(d.class);
+        const M = color.ColorMap(Keys, Tailwind);
+        const col = M.map(d.class) orelse return self.log_any(d.class);
+        self.draw(layer, feat, col, linewidth, &self.surface0);
+    }
+}
+fn log_any(self: *This, t: anytype) void {
+    const s = dec.print_any(t, self.alloc) catch |e| {
+        std.log.err("failed to print log because of {}", .{e});
+        return;
+    };
+    defer self.alloc.free(s);
+    std.log.warn("{s}", .{t});
+}
+pub fn render_transportation_name(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Transportation_name) void {
+    if (toggle_transportation_name) {
         const highway = &.{
-            "motorway",
             "trunk",
             "motorway_construction",
             "trunk_construction",
@@ -238,10 +341,10 @@ pub fn render_transportation(self: *This, layer: *const Layer, feat: *const Feat
 
         const primary = &.{
             "primary",
-            "secondary",
-            "tertiary",
             "primary_construction",
+            "secondary",
             "secondary_construction",
+            "tertiary",
             "tertiary_construction",
         };
 
@@ -253,51 +356,65 @@ pub fn render_transportation(self: *This, layer: *const Layer, feat: *const Feat
         };
 
         const path = &.{
-            "path",
             "track",
-            "raceway",
-            "path_construction",
             "track_construction",
+            "path",
+            "path_construction",
+            "raceway",
             "raceway_construction",
         };
 
-        const transit = &.{
-            "busway",
-            "bus_guideway",
-            "ferry",
-        };
-
-        const Color = struct {
-            pub const purple = color.DarkPurple.purple900;
-            pub const black = color.Gray.dark_gray;
-            pub const gray = color.Gray.gray;
-            pub const light_gray = color.Gray.light_gray;
-            pub const red = color.DeepRed.red800;
+        const rail = &.{
+            "rail",
+            "transit",
         };
         const Keys = struct {
-            pub const purple = highway;
-            pub const black = primary;
-            pub const gray = minor;
-            pub const light_gray = path;
-            pub const red = transit;
+            pub const violet800 = highway;
+            pub const slate600 = primary;
+            pub const gray500 = minor;
+            pub const stone500 = path;
+            pub const red800 = rail;
         };
-        const M = color.ColorMap(Keys, Color);
-        const col = M.map(d.class) orelse color.from_hex(Color.gray);
-
-        self.draw(layer, feat, col, &self.surface0);
+        const Thickness = struct {
+            pub const xxl = highway;
+            pub const xl = primary;
+            pub const l = minor;
+            pub const L = rail;
+            pub const m = path;
+        };
+        const linewidth = Line.line_width(Thickness, d.class) orelse return self.log_any(d);
+        const M = color.ColorMap(Keys, Tailwind);
+        const col = M.map(d.class) orelse return self.log_any(d); //color.from_hex(Color.gray);
+        self.draw(layer, feat, col, linewidth, &self.surface0);
     }
 }
-pub fn render_transportation_name(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Transportation_name) void {
-    _ = .{ feat, self, d, layer };
-}
 pub fn render_water(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Water) void {
-    _ = .{ feat, self, d, layer };
+    if (toggle_water) {
+        const Keys = struct {
+            pub const blue500 = &.{"river"};
+            pub const teal700 = &.{"pond"};
+            pub const cyan500 = &.{ "dock", "swimming_pool" };
+            pub const sky700 = &.{"lake"};
+            pub const cyan900 = &.{"ocean"};
+        };
+        const col = color.ColorMap(Keys, Tailwind).map(d.class) orelse color.from_hex(Tailwind.blue500);
+        self.draw(layer, feat, col, 2.0, &self.surface0);
+    }
 }
 pub fn render_water_name(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Water_name) void {
     _ = .{ feat, self, d, layer };
 }
 pub fn render_waterway(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Waterway) void {
-    _ = .{ feat, self, d, layer };
+    if (toggle_waterway) {
+        const Keys = struct {
+            pub const teal400 = &.{"stream"};
+            pub const blue500 = &.{"river"};
+            pub const cyan800 = &.{"canal"};
+            pub const teal950 = &.{ "drain", "ditch" };
+        };
+        const col = color.ColorMap(Keys, Tailwind).map(d.class) orelse color.from_hex(Tailwind.blue500);
+        self.draw(layer, feat, col, 2.0, &self.surface0);
+    }
 }
 
 pub fn render(self: *This, tile: *const dec.Tile) void {
@@ -331,7 +448,17 @@ test "render 1" {
     const input = try file.reader().readAllAlloc(alloc, 10 * 1024 * 1024);
     const tile: dec.Tile = try dec.decode(input, alloc);
 
-    var rend = try This.init(alloc, 1024);
+    const width_height = 1024;
+    var rend = try This.init(alloc, width_height);
+    for (0..width_height) |x| {
+        for (0..width_height) |y| {
+            rend.surface0.putPixel(
+                @intCast(x),
+                @intCast(y),
+                z2d.Pixel{ .rgb = .{ .r = 255, .g = 255, .b = 255 } },
+            );
+        }
+    }
     rend.render(&tile);
 
     try z2d.png_exporter.writeToPNGFile(rend.surface0, "./testdata/surface0.png", .{});

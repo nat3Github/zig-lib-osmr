@@ -79,6 +79,7 @@ pub const DeepRed = struct {
     pub const red600 = "#e10000";
     pub const red500 = "#ff0000";
 };
+// minimalist very dark purple https://www.color-hex.com/color-palette/97197
 pub const DarkPurple = struct {
     pub const purple900 = "#300030";
     pub const purple800 = "#480838";
@@ -98,8 +99,9 @@ pub const Green = struct {
 
 /// decls of the definition struct must match any decls of colorpalette struct
 /// type of the colorpallete decls is RgbaCol or a hex string
-/// NOTE: not sure if the decls must be pub but that could be
+/// NOTE: the decls of definition must be set to pub! otherwise it matches nothing
 pub fn color_attribute_mapper(definition: anytype, colorpalette: anytype, key: []const u8) ?RgbaCol {
+    @setEvalBranchQuota(2000);
     switch (@typeInfo(definition)) {
         .@"struct" => |st| {
             const decls = st.decls;
@@ -138,7 +140,7 @@ pub fn ColorMap(Def: type, Pal: type) type {
 }
 
 test "color attribute mapper" {
-    const LandCoverColors = struct {
+    const COl = struct {
         pub const dark_green = TreesAndNature.dark_green;
         pub const green = TreesAndNature.light_green; //Green.grass;
         pub const yellow = Nature.ocker;
@@ -146,7 +148,7 @@ test "color attribute mapper" {
         pub const white = Aquatic.white;
         pub const gray = Gray.light_gray;
     };
-    const LandCoverKeyMap = struct {
+    const KeyMap = struct {
         pub const white = &.{"ice"};
         pub const gray = &.{"rock"};
         pub const dark_green = &.{"wood"};
@@ -154,9 +156,17 @@ test "color attribute mapper" {
         pub const yellow = &.{"sand"};
         pub const brown = &.{ "wetland", "farmland" };
     };
-    const Col = ColorMap(LandCoverKeyMap, LandCoverColors);
+    const Col = ColorMap(KeyMap, COl);
     if (Col.map("farmland")) |col| {
         try expect(col.eql(from_hex(Nature.brown)));
         std.log.warn("rgb {any}", .{col});
     }
 }
+pub const LandCoverColors = struct {
+    pub const dark_green = TreesAndNature.dark_green;
+    pub const green = TreesAndNature.light_green; //Green.grass;
+    pub const yellow = Nature.ocker;
+    pub const brown = Nature.brown;
+    pub const white = Aquatic.white;
+    pub const gray = Gray.light_gray;
+};

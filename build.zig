@@ -3,6 +3,12 @@ const protobuf = @import("protobuf");
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+
+    const tailwind_dep = b.dependency("tailwind", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    const tailwind_module = tailwind_dep.module("tailwind");
     const z2d_dep = b.dependency("z2d", .{
         .target = target,
         .optimize = optimize,
@@ -35,6 +41,7 @@ pub fn build(b: *std.Build) !void {
     });
     osmr_module.addImport("protobuf", protobuf_module);
     osmr_module.addImport("z2d", z2d_module);
+    osmr_module.addImport("tailwind", tailwind_module);
 
     const lib_test = b.addTest(.{
         .target = target,

@@ -63,8 +63,10 @@ pub fn print_any(t: anytype, alloc: Allocator) ![]const u8 {
             }
         },
         .pointer => |p| {
-            if (p.is_const and p.child == u8) {
+            if (comptime p.is_const and p.child == u8) {
                 try slist.appendSlice(try aprint(alloc, "{s}", .{t}));
+            } else if (comptime p.size == .one) {
+                try slist.appendSlice(try print_any(t.*, alloc));
             } else {
                 try slist.appendSlice(try aprint(alloc, "{any}\n", .{t}));
             }
