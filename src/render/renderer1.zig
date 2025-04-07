@@ -120,11 +120,11 @@ const RenderConfig = struct {
     toggle_transportation_name: bool = false,
     toggle_water: bool = false,
     toggle_waterway: bool = false,
+    toggle_aeroway: bool = false,
+    toggle_boundary: bool = false,
 
     // NOTE: not implemented for now
-    toggle_aeroway: bool = false,
     toggle_aerodrome_label: bool = false,
-    toggle_boundary: bool = false,
     toggle_housenumber: bool = false,
     toggle_landuse: bool = false,
     toggle_mountain_peak: bool = false,
