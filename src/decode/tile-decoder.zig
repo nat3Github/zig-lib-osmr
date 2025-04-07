@@ -55,18 +55,19 @@ pub fn print_any(t: anytype, alloc: Allocator) ![]const u8 {
         .@"struct" => |s| {
             try slist.appendSlice(try aprint(alloc, "struct {}\n", .{T}));
             inline for (s.fields) |field| {
+                const field_rek = try print_any(@field(t, field.name), alloc);
                 try slist.appendSlice(try aprint(alloc, "{s} :{} = {s}\n", .{
                     field.name,
                     field.type,
-                    try print_any(@field(t, field.name), alloc),
+                    field_rek,
                 }));
             }
         },
         .pointer => |p| {
-            if (comptime p.is_const and p.child == u8) {
-                try slist.appendSlice(try aprint(alloc, "{s}", .{t}));
-            } else if (comptime p.size == .one) {
+            if (comptime p.size == .one) {
                 try slist.appendSlice(try print_any(t.*, alloc));
+            } else if (comptime p.is_const and p.child == u8) {
+                try slist.appendSlice(try aprint(alloc, "{s}", .{t}));
             } else {
                 try slist.appendSlice(try aprint(alloc, "{any}\n", .{t}));
             }
@@ -571,6 +572,36 @@ test "cmd 2" {
     try expect(x2 == -90);
 }
 
+const Debugger = struct {
+    x: i32 = 0,
+    y: i32 = 0,
+    idx: usize = 0,
+    buf: [100]i32 = undefined,
+    result: []i32 = undefined,
+    const XX = @This();
+    fn print(self: *XX) void {
+        self.buf[self.idx] = self.x;
+        self.buf[self.idx + 1] = self.y;
+        self.idx += 2;
+    }
+    fn close(self: *XX) void {
+        // std.log.warn("close", .{});
+        self.print();
+        self.result = self.buf[0..self.idx];
+    }
+    fn move(self: *XX, x: i32, y: i32) void {
+        self.x += x;
+        self.y += y;
+        self.print();
+        // std.log.warn("move to x: {}, y: {}", .{ self.x, self.y });
+    }
+    fn line(self: *XX, x: i32, y: i32) void {
+        self.x += x;
+        self.y += y;
+        self.print();
+        // std.log.warn("line to x: {}, y: {}", .{ self.x, self.y });
+    }
+};
 test "cmd 1" {
     const geometry: []const u32 = &.{
         9, // MoveTo 1 point
@@ -585,45 +616,32 @@ test "cmd 1" {
         0, // zigzag(0)
         7, // ClosePath
     };
-    const XX = struct {
-        x: i32 = 0,
-        y: i32 = 0,
-        idx: usize = 0,
-        buf: [100]i32 = undefined,
-        result: []i32 = undefined,
-        const XX = @This();
-        fn print(self: *XX) void {
-            self.buf[self.idx] = self.x;
-            self.buf[self.idx + 1] = self.y;
-            self.idx += 2;
-        }
-        fn close(self: *XX) void {
-            std.log.debug("close", .{});
-            self.print();
-            self.result = self.buf[0..self.idx];
-        }
-        fn move(self: *XX, x: i32, y: i32) void {
-            std.log.debug("move to x: {}, y: {}", .{ x, y });
-            self.x = x;
-            self.y = y;
-            self.print();
-        }
-        fn line(self: *XX, x: i32, y: i32) void {
-            std.log.debug("line to x: {}, y: {}", .{ x, y });
-            self.x += x;
-            self.y += y;
-            self.print();
-        }
-    };
-    var xx = XX{};
-
+    var xx = Debugger{};
     try Cmd.decode(
         geometry,
         &xx,
-        XX.close,
-        XX.move,
-        XX.line,
+        Debugger.close,
+        Debugger.move,
+        Debugger.line,
     );
     const expected: []const i32 = &.{ 10, 10, 100, 10, 100, 100, 10, 100, 10, 100 };
     try expect(std.mem.eql(i32, expected, xx.result));
+}
+
+test "cmd 3" {
+    // const geometry: []const u32 = &.{
+    //     9,   5140, 3234, 66, 90,  27, 610, 101, 184, 41,  94, 33, 76, 33, 118, 77, 48,  61,  86,  193, 9,  1357, 522, 114,
+    //     114, 71,   94,   23, 572, 79, 86,  19,  98,  29,  74, 31, 68, 37, 54,  39, 198, 185, 544, 751, 84, 73,   510, 403,
+    //     74,  37,   110,  89, 9,   91, 3,   10,  91,  132,
+    // };
+    // var xx = Debugger{};
+    // try Cmd.decode(
+    //     geometry,
+    //     &xx,
+    //     Debugger.close,
+    //     Debugger.move,
+    //     Debugger.line,
+    // );
+    // const expected: []const i32 = &.{};
+    // try expect(std.mem.eql(i32, expected, xx.result));
 }

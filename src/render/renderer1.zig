@@ -24,6 +24,7 @@ const WRender = struct {
     };
     x: i32 = 0,
     y: i32 = 0,
+    debug: bool = false,
     extent: u32,
     ctx: *z2d.Context,
     rtype: Type = .Polygon,
@@ -31,6 +32,8 @@ const WRender = struct {
         self: *WRender,
         cmd_buffer: []u32,
     ) void {
+        self.x = 0;
+        self.y = 0;
         Cmd.decode(
             cmd_buffer,
             self,
@@ -44,33 +47,36 @@ const WRender = struct {
         switch (self.rtype) {
             .Polygon => {},
             .LineString => {
-                self.ctx.stroke() catch {};
+                swallow_error(self.ctx.stroke());
             },
         }
     }
+    fn swallow_error(res: anyerror!void) void {
+        _ = res catch |e| std.log.err("error: {}", .{e});
+    }
     fn close_path(self: *WRender) void {
-        // std.log.warn("close path", .{});
-        self.ctx.closePath() catch {};
+        if (self.debug) std.log.warn("close path", .{});
+        swallow_error(self.ctx.closePath());
         switch (self.rtype) {
             .Polygon => {
-                self.ctx.fill() catch {};
+                swallow_error(self.ctx.fill());
             },
             .LineString => {
-                self.ctx.stroke() catch {};
+                swallow_error(self.ctx.stroke());
             },
         }
     }
     fn move_to(self: *WRender, x: i32, y: i32) void {
-        self.set_xy(x, y);
+        self.add_xy(x, y);
         const mx, const my = self.get_xy_f64();
-        self.ctx.moveTo(mx, my) catch {};
-        // std.log.warn("moved to x: {d:.0}, y: {d:.0}", .{ mx, my });
+        swallow_error(self.ctx.moveTo(mx, my));
+        if (self.debug) std.log.warn("moved to x: {d:.0}, y: {d:.0}", .{ mx, my });
     }
     fn line_to(self: *WRender, x: i32, y: i32) void {
         self.add_xy(x, y);
         const mx, const my = self.get_xy_f64();
-        self.ctx.lineTo(mx, my) catch {};
-        // std.log.warn("line to x: {d:.0}, y: {d:.0}", .{ mx, my });
+        swallow_error(self.ctx.lineTo(mx, my));
+        if (self.debug) std.log.warn("line to x: {d:.0}, y: {d:.0}", .{ mx, my });
     }
 
     inline fn clamped_xy(self: *WRender, x: i32, y: i32) struct { i32, i32 } {
@@ -90,10 +96,6 @@ const WRender = struct {
         const x, const y = self.convert_and_clamp(self.x, self.y);
         return .{ @floatFromInt(x), @floatFromInt(y) };
     }
-    inline fn set_xy(self: *WRender, x: i32, y: i32) void {
-        self.x = x;
-        self.y = y;
-    }
     inline fn add_xy(self: *WRender, x: i32, y: i32) void {
         self.x += x;
         self.y += y;
@@ -107,7 +109,7 @@ const WRender = struct {
 alloc: Allocator,
 surface0: z2d.Surface,
 context0: z2d.Context = undefined,
-counter: usize = 2,
+counter: usize = 0,
 
 const toggle_aeroway = false;
 const toggle_aerodrome_label = false;
@@ -158,6 +160,15 @@ inline fn draw(self: *This, layer: *const Layer, feat: *const Feature, col: colo
     var context = z2d.Context.init(alloc, surface);
     defer context.deinit();
     var ren = WRender{ .ctx = &context, .extent = extent };
+    if (self.counter == 60) {
+        std.log.warn("{} {any} color: {} linewidth {}", .{
+            geomtype,
+            geo,
+            col,
+            line_width,
+        });
+        ren.debug = true;
+    }
     switch (geomtype) {
         .POINT => std.log.warn("not implemented", .{}),
         .LINESTRING => {
@@ -289,7 +300,6 @@ pub fn render_transportation(self: *This, layer: *const Layer, feat: *const Feat
                 "trunk_construction",
                 "primary",
                 "primary_construction",
-                "transit",
             };
             pub const xl = &.{
                 "secondary",
@@ -303,6 +313,7 @@ pub fn render_transportation(self: *This, layer: *const Layer, feat: *const Feat
                 "service",
                 "minor_construction",
                 "service_construction",
+                "transit",
                 "busway",
                 "bus_guideway",
                 "bridge",
@@ -328,8 +339,8 @@ fn log_any(self: *This, t: anytype) void {
         std.log.err("failed to print log because of {}", .{e});
         return;
     };
-    defer self.alloc.free(s);
-    std.log.warn("{s}", .{t});
+    std.log.warn("{s}", .{s});
+    self.alloc.free(s);
 }
 pub fn render_transportation_name(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Transportation_name) void {
     if (toggle_transportation_name) {
@@ -382,19 +393,21 @@ pub fn render_transportation_name(self: *This, layer: *const Layer, feat: *const
             pub const L = rail;
             pub const m = path;
         };
-        const linewidth = Line.line_width(Thickness, d.class) orelse return self.log_any(d);
+        // std.log.warn("{s} index: {}", .{ d.name, self.counter });
+        const linewidth = Line.line_width(Thickness, d.class) orelse return self.log_any(d.*);
         const M = color.ColorMap(Keys, Tailwind);
-        const col = M.map(d.class) orelse return self.log_any(d); //color.from_hex(Color.gray);
+        const col = M.map(d.class) orelse return self.log_any(d.*); //color.from_hex(Color.gray);
         self.draw(layer, feat, col, linewidth, &self.surface0);
+        self.counter += 1;
     }
 }
 pub fn render_water(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Water) void {
     if (toggle_water) {
         const Keys = struct {
             pub const blue500 = &.{"river"};
-            pub const teal700 = &.{"pond"};
+            pub const teal500 = &.{"pond"};
             pub const cyan500 = &.{ "dock", "swimming_pool" };
-            pub const sky700 = &.{"lake"};
+            pub const sky500 = &.{"lake"};
             pub const cyan900 = &.{"ocean"};
         };
         const col = color.ColorMap(Keys, Tailwind).map(d.class) orelse color.from_hex(Tailwind.blue500);
