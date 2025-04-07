@@ -205,7 +205,8 @@ pub fn render_landcover(self: *This, layer: *const Layer, feat: *const Feature, 
         const extent = get_extent(layer);
         const geomtype = feat.type orelse .UNKNOWN;
         const geo = feat.geometry.items;
-        std.log.warn("feature {s}, typ: {}, cmdlen: {}", .{ d.class, geomtype, geo.len });
+        _ = d;
+        // std.log.warn("feature {s}, typ: {}, cmdlen: {}", .{ d.class, geomtype, geo.len });
         var context = z2d.Context.init(alloc, &self.surface0);
         defer context.deinit();
         var r = WRender{ .ctx = &context, .extent = extent };
