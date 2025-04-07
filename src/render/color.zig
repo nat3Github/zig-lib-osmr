@@ -16,6 +16,10 @@ pub fn from_hex(comptime hex: []const u8) RgbaCol {
     };
     return RgbaCol{ .rgba = rgba };
 }
+pub fn convert_hex(hex: []const u8) !RgbaCol {
+    const rgba = try hexToRgb(hex);
+    return RgbaCol{ .rgba = rgba };
+}
 /// for easy tuple destructuring
 pub fn rgb(self: *const RgbaCol) struct { u8, u8, u8 } {
     const arr = self.rgba;
@@ -24,18 +28,28 @@ pub fn rgb(self: *const RgbaCol) struct { u8, u8, u8 } {
 pub fn eql(self: *const RgbaCol, other: RgbaCol) bool {
     return std.mem.eql(u8, &self.rgba, &other.rgba);
 }
-fn hexToRgb(hex: []const u8) ![4]u8 {
-    if (hex[0] == '#') return hexToRgb(hex[1..]);
-    if (hex.len != 6) return error.HexColorCodeWrongLen;
-    var rgba: [4]u8 = undefined;
-    for (rgba[0..3], 0..) |_, i| {
-        const start = i * 2;
-        const slice = hex[start .. start + 2];
-        const value = try std.fmt.parseInt(u8, slice, 16);
-        rgba[i] = value;
+inline fn hexToRgb(hex: []const u8) ![4]u8 {
+    var rgba: [4]u8 = .{ 0, 0, 0, 255 };
+    if (hex.len == 6) {
+        for (rgba[0..3], 0..) |_, i| {
+            const start = i * 2;
+            const slice = hex[start .. start + 2];
+            const value = try std.fmt.parseInt(u8, slice, 16);
+            rgba[i] = value;
+        }
+        return rgba;
     }
-    rgba[3] = 255;
-    return rgba;
+    if (hex.len == 7 and hex[0] == '#') {
+        const hex1 = hex[1..];
+        for (rgba[0..3], 0..) |_, i| {
+            const start = i * 2;
+            const slice = hex1[start .. start + 2];
+            const value = try std.fmt.parseInt(u8, slice, 16);
+            rgba[i] = value;
+        }
+        return rgba;
+    }
+    return error.FailedToParseHexColor;
 }
 
 // nature-inspired https://www.color-hex.com/color-palette/1040990
@@ -159,7 +173,6 @@ test "color attribute mapper" {
     const Col = ColorMap(KeyMap, COl);
     if (Col.map("farmland")) |col| {
         try expect(col.eql(from_hex(Nature.brown)));
-        std.log.warn("rgb {any}", .{col});
     }
 }
 pub const LandCoverColors = struct {
