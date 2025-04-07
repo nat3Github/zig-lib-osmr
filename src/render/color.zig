@@ -4,37 +4,39 @@ const assert = std.debug.assert;
 const expect = std.testing.expect;
 const root = @import("../root.zig");
 
-pub const RgbaCol = struct {
-    rgba: [4]u8 = std.mem.zeroes([4]u8),
-    pub const red = RgbaCol{ .rgba = .{ 255, 0, 0, 0 } };
-    pub const green = RgbaCol{ .rgba = .{ 0, 255, 0, 0 } };
-    pub const yellow = RgbaCol{ .rgba = .{ 255, 255, 0, 0 } };
-    /// accepts "FF00FF" or "#FF00FF" or "#ff00ff"
-    pub fn from_hex(comptime hex: []const u8) RgbaCol {
-        const rgba = comptime hexToRgb(hex) catch {
-            @compileError("failed to convert rgba from hex code");
-        };
-        return RgbaCol{ .rgba = rgba };
+pub const RgbaCol = @This();
+rgba: [4]u8 = std.mem.zeroes([4]u8),
+pub const red = RgbaCol{ .rgba = .{ 255, 0, 0, 0 } };
+pub const green = RgbaCol{ .rgba = .{ 0, 255, 0, 0 } };
+pub const yellow = RgbaCol{ .rgba = .{ 255, 255, 0, 0 } };
+/// accepts "FF00FF" or "#FF00FF" or "#ff00ff"
+pub fn from_hex(comptime hex: []const u8) RgbaCol {
+    const rgba = comptime hexToRgb(hex) catch {
+        @compileError("failed to convert rgba from hex code");
+    };
+    return RgbaCol{ .rgba = rgba };
+}
+/// for easy tuple destructuring
+pub fn rgb(self: *const RgbaCol) struct { u8, u8, u8 } {
+    const arr = self.rgba;
+    return .{ arr[0], arr[1], arr[2] };
+}
+pub fn eql(self: *const RgbaCol, other: RgbaCol) bool {
+    return std.mem.eql(u8, &self.rgba, &other.rgba);
+}
+fn hexToRgb(hex: []const u8) ![4]u8 {
+    if (hex[0] == '#') return hexToRgb(hex[1..]);
+    if (hex.len != 6) return error.HexColorCodeWrongLen;
+    var rgba: [4]u8 = undefined;
+    for (rgba[0..3], 0..) |_, i| {
+        const start = i * 2;
+        const slice = hex[start .. start + 2];
+        const value = try std.fmt.parseInt(u8, slice, 16);
+        rgba[i] = value;
     }
-    /// for easy tuple destructuring
-    pub fn rgb(self: *const RgbaCol) struct { u8, u8, u8 } {
-        const arr = self.rgba;
-        return .{ arr[0], arr[1], arr[2] };
-    }
-    fn hexToRgb(hex: []const u8) ![4]u8 {
-        if (hex[0] == '#') return hexToRgb(hex[1..]);
-        if (hex.len != 6) return error.HexColorCodeWrongLen;
-        var rgba: [4]u8 = undefined;
-        for (rgba[0..3], 0..) |_, i| {
-            const start = i * 2;
-            const slice = hex[start .. start + 2];
-            const value = try std.fmt.parseInt(u8, slice, 16);
-            rgba[i] = value;
-        }
-        rgba[3] = 255;
-        return rgba;
-    }
-};
+    rgba[3] = 255;
+    return rgba;
+}
 
 // nature-inspired https://www.color-hex.com/color-palette/1040990
 pub const Nature = struct {
@@ -61,35 +63,37 @@ pub const Gray = struct {
     pub const black = "#343434";
 };
 
-pub const LandCoverPallete = struct {
-    pub const dark_green = Nature.green;
-    pub const green = Nature.dark_green;
-    pub const yellow = Nature.ocker;
-    pub const brown = Nature.brown;
-    pub const white = Aquatic.white;
-    pub const gray = Gray.light_gray;
+// trees and nature https://www.color-hex.com/color-palette/89702
+pub const TreesAndNature = struct {
+    pub const light_white = "#ffffff";
+    pub const white = "#f4f1e9";
+    pub const light_green = "#b1d182";
+    pub const olive_green = "#688f4e";
+    pub const dark_green = "#2b463c";
+};
+// deep red https://www.color-hex.com/color-palette/9293
+pub const DeepRed = struct {
+    pub const red900 = "#960000";
+    pub const red800 = "#ae0000";
+    pub const red700 = "#c70000";
+    pub const red600 = "#e10000";
+    pub const red500 = "#ff0000";
+};
+pub const DarkPurple = struct {
+    pub const purple900 = "#300030";
+    pub const purple800 = "#480838";
+    pub const purple700 = "#580838";
+    pub const purple600 = "#600840";
+    pub const purple500 = "#680840";
 };
 
-pub const LandCoverColorMap = struct {
-    pub const white = &.{
-        "ice",
-    };
-    pub const gray = &.{
-        "rock",
-    };
-    pub const dark_green = &.{
-        "wood",
-    };
-    pub const green = &.{
-        "grass",
-    };
-    pub const yellow = &.{
-        "sand",
-    };
-    pub const brown = &.{
-        "wetland",
-        "farmland",
-    };
+// green pallete https://www.color-hex.com/color-palette/30573
+pub const Green = struct {
+    pub const ocker = "#ececa3";
+    pub const grass = "#b5e550";
+    pub const yellow_grass = "#abc32f";
+    pub const olive = "#809c13";
+    pub const dark_olive = "#607c3c";
 };
 
 /// decls of the definition struct must match any decls of colorpalette struct
@@ -122,8 +126,37 @@ pub fn color_attribute_mapper(definition: anytype, colorpalette: anytype, key: [
     }
 }
 
+pub fn ColorMap(Def: type, Pal: type) type {
+    return struct {
+        const This = @This();
+        const def = Def;
+        const pallete = Pal;
+        pub fn map(key: []const u8) ?RgbaCol {
+            return color_attribute_mapper(This.def, This.pallete, key);
+        }
+    };
+}
+
 test "color attribute mapper" {
-    if (color_attribute_mapper(LandCoverColorMap, LandCoverPallete, "farmland")) |col| {
+    const LandCoverColors = struct {
+        pub const dark_green = TreesAndNature.dark_green;
+        pub const green = TreesAndNature.light_green; //Green.grass;
+        pub const yellow = Nature.ocker;
+        pub const brown = Nature.brown;
+        pub const white = Aquatic.white;
+        pub const gray = Gray.light_gray;
+    };
+    const LandCoverKeyMap = struct {
+        pub const white = &.{"ice"};
+        pub const gray = &.{"rock"};
+        pub const dark_green = &.{"wood"};
+        pub const green = &.{"grass"};
+        pub const yellow = &.{"sand"};
+        pub const brown = &.{ "wetland", "farmland" };
+    };
+    const Col = ColorMap(LandCoverKeyMap, LandCoverColors);
+    if (Col.map("farmland")) |col| {
+        try expect(col.eql(from_hex(Nature.brown)));
         std.log.warn("rgb {any}", .{col});
     }
 }

@@ -11,6 +11,7 @@ const Feature = dec.Feature;
 const This = @This();
 const Traverser = dec.LayerTraverser(This);
 const Cmd = dec.Cmd;
+const color = root.color;
 
 const WRender = struct {
     const Type = enum {
@@ -104,6 +105,23 @@ surface0: z2d.Surface,
 context0: z2d.Context = undefined,
 counter: usize = 2,
 
+const toggle_aeroway = false;
+const toggle_aerodrome_label = false;
+const toggle_boundary = false;
+const toggle_building = false;
+const toggle_housenumber = false;
+const toggle_landcover = false;
+const toggle_landuse = false;
+const toggle_mountain_peak = false;
+const toggle_park = false;
+const toggle_place = false;
+const toggle_poi = false;
+const toggle_transportation = true;
+const toggle_transportation_name = false;
+const toggle_water = false;
+const toggle_water_name = false;
+const toggle_waterway = false;
+
 pub fn init(alloc: Allocator, width_height: u32) !This {
     var t = This{
         .alloc = alloc,
@@ -123,7 +141,31 @@ pub fn deinit(self: *This) void {
     self.surface0.deinit(alloc);
     self.context0.deinit();
 }
-fn get_extent(layer: *const Layer) u32 {
+
+pub fn draw(self: *This, layer: *const Layer, feat: *const Feature, col: color, surface: *z2d.Surface) void {
+    const alloc = self.alloc;
+    const extent = get_extent(layer);
+    const geomtype = feat.type orelse .UNKNOWN;
+    const geo = feat.geometry.items;
+    var context = z2d.Context.init(alloc, surface);
+    defer context.deinit();
+    var ren = WRender{ .ctx = &context, .extent = extent };
+    switch (geomtype) {
+        .POINT => std.log.warn("not implemented", .{}),
+        .LINESTRING => {
+            ren.rtype = .LineString;
+        },
+        .POLYGON => {
+            ren.rtype = .Polygon;
+        },
+        else => return,
+    }
+    const r, const g, const b = col.rgb();
+    context.setSourceToPixel(.{ .rgb = .{ .r = r, .g = g, .b = b } });
+    ren.render_geometry(geo);
+}
+
+inline fn get_extent(layer: *const Layer) u32 {
     const extent = layer.extent orelse {
         std.log.err("no extent specified", .{});
         return 4096;
@@ -138,93 +180,38 @@ pub fn render_aerodrome_label(self: *This, layer: *const Layer, feat: *const Fea
     _ = .{ feat, self, d, layer };
 }
 pub fn render_boundary(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Boundary) void {
-    if (self.counter == 1) {
-        const alloc = self.alloc;
-        const extent = get_extent(layer);
-        const geomtype = feat.type orelse .UNKNOWN;
-        const geo = feat.geometry.items;
-        std.log.warn("feature {s}, typ: {}, cmdlen: {}", .{ d.class, geomtype, geo.len });
-        var context = z2d.Context.init(alloc, &self.surface0);
-        var r = WRender{ .ctx = &context, .extent = extent };
-        switch (geomtype) {
-            .POINT => std.log.warn("not implemented", .{}),
-            .LINESTRING => {
-                r.rtype = .LineString;
-            },
-            .POLYGON => {
-                r.rtype = .Polygon;
-            },
-            else => return,
-        }
-        context.setSourceToPixel(.{ .rgb = .{ .r = 0xFF, .g = 0xFF, .b = 0x00 } });
-        r.render_geometry(geo);
+    _ = .{ feat, self, d, layer };
+}
+pub fn render_building(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Building) void {
+    _ = .{ feat, self, d, layer };
+}
+pub fn render_housenumber(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Housenumber) void {
+    _ = .{ feat, self, d, layer };
+}
+pub fn render_landcover(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Landcover) void {
+    if (toggle_landcover) {
+        const LandCoverColors = struct {
+            pub const dark_green = color.TreesAndNature.dark_green;
+            pub const green = color.TreesAndNature.light_green; //Green.grass;
+            pub const yellow = color.Nature.ocker;
+            pub const brown = color.Nature.brown;
+            pub const white = color.Aquatic.white;
+            pub const gray = color.Gray.light_gray;
+        };
+        const LandCoverKeyMap = struct {
+            pub const white = &.{"ice"};
+            pub const gray = &.{"rock"};
+            pub const dark_green = &.{"wood"};
+            pub const green = &.{"grass"};
+            pub const yellow = &.{"sand"};
+            pub const brown = &.{ "wetland", "farmland" };
+        };
+        const Col = color.ColorMap(LandCoverKeyMap, LandCoverColors);
+        const col = Col.map(d.class) orelse color.from_hex(LandCoverColors.green);
+        self.draw(layer, feat, col, &self.surface0);
     }
 }
 
-pub fn render_building(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Building) void {
-    if (self.counter == 1) {
-        const alloc = self.alloc;
-        const extent = layer.extent orelse {
-            std.log.err("no extent specified", .{});
-            return;
-        };
-        const geomtype = feat.type orelse .UNKNOWN;
-        const geo = feat.geometry.items;
-        std.log.info("feature {s}, typ: {}, cmdlen: {}", .{ d.colour, geomtype, geo.len });
-        var context = z2d.Context.init(alloc, &self.surface0);
-        var r = WRender{ .ctx = &context, .extent = extent };
-        context.setSourceToPixel(.{ .rgb = .{ .r = 0xFF, .g = 0xFF, .b = 0x00 } });
-        r.render_geometry(geo);
-        context.stroke() catch |e| {
-            std.log.err("failed to draw {}", .{e});
-        };
-    }
-}
-pub fn render_housenumber(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Housenumber) void {
-    if (self.counter == 1) {
-        const alloc = self.alloc;
-        const extent = layer.extent orelse {
-            std.log.warn("no extent specified", .{});
-            return;
-        };
-        const geomtype = feat.type orelse .UNKNOWN;
-        const geo = feat.geometry.items;
-        std.log.warn("feature {s}, typ: {}, cmdlen: {}", .{ d.housenumber, geomtype, geo.len });
-        var context = z2d.Context.init(alloc, &self.surface0);
-        var r = WRender{ .ctx = &context, .extent = extent };
-        context.setSourceToPixel(.{ .rgb = .{ .r = 0xFF, .g = 0xFF, .b = 0x00 } });
-        r.render_geometry(geo);
-        context.stroke() catch |e| {
-            std.log.err("failed to draw {}", .{e});
-        };
-    }
-}
-pub fn render_landcover(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Landcover) void {
-    if (self.counter > 0) {
-        const alloc = self.alloc;
-        const extent = get_extent(layer);
-        const geomtype = feat.type orelse .UNKNOWN;
-        const geo = feat.geometry.items;
-        _ = d;
-        // std.log.warn("feature {s}, typ: {}, cmdlen: {}", .{ d.class, geomtype, geo.len });
-        var context = z2d.Context.init(alloc, &self.surface0);
-        defer context.deinit();
-        var r = WRender{ .ctx = &context, .extent = extent };
-        switch (geomtype) {
-            .POINT => std.log.warn("not implemented", .{}),
-            .LINESTRING => {
-                r.rtype = .LineString;
-            },
-            .POLYGON => {
-                r.rtype = .Polygon;
-            },
-            else => return,
-        }
-        context.setSourceToPixel(.{ .rgb = .{ .r = 0x00, .g = 0xFF, .b = 0x00 } });
-        r.render_geometry(geo);
-    }
-    self.counter += 1;
-}
 pub fn render_landuse(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Landuse) void {
     _ = .{ feat, self, d, layer };
 }
@@ -241,26 +228,63 @@ pub fn render_poi(self: *This, layer: *const Layer, feat: *const Feature, d: *co
     _ = .{ feat, self, d, layer };
 }
 pub fn render_transportation(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Transportation) void {
-    if (self.counter == 1) {
-        const alloc = self.alloc;
-        const extent = get_extent(layer);
-        const geomtype = feat.type orelse .UNKNOWN;
-        const geo = feat.geometry.items;
-        std.log.warn("feature {s}, typ: {}, cmdlen: {}", .{ d.class, geomtype, geo.len });
-        var context = z2d.Context.init(alloc, &self.surface0);
-        var r = WRender{ .ctx = &context, .extent = extent };
-        switch (geomtype) {
-            .POINT => std.log.warn("not implemented", .{}),
-            .LINESTRING => {
-                r.rtype = .LineString;
-            },
-            .POLYGON => {
-                r.rtype = .Polygon;
-            },
-            else => return,
-        }
-        context.setSourceToPixel(.{ .rgb = .{ .r = 0xFF, .g = 0xFF, .b = 0x00 } });
-        r.render_geometry(geo);
+    if (toggle_transportation) {
+        const highway = &.{
+            "motorway",
+            "trunk",
+            "motorway_construction",
+            "trunk_construction",
+        };
+
+        const primary = &.{
+            "primary",
+            "secondary",
+            "tertiary",
+            "primary_construction",
+            "secondary_construction",
+            "tertiary_construction",
+        };
+
+        const minor = &.{
+            "minor",
+            "service",
+            "minor_construction",
+            "service_construction",
+        };
+
+        const path = &.{
+            "path",
+            "track",
+            "raceway",
+            "path_construction",
+            "track_construction",
+            "raceway_construction",
+        };
+
+        const transit = &.{
+            "busway",
+            "bus_guideway",
+            "ferry",
+        };
+
+        const Color = struct {
+            pub const purple = color.DarkPurple.purple900;
+            pub const black = color.Gray.dark_gray;
+            pub const gray = color.Gray.gray;
+            pub const light_gray = color.Gray.light_gray;
+            pub const red = color.DeepRed.red800;
+        };
+        const Keys = struct {
+            pub const purple = highway;
+            pub const black = primary;
+            pub const gray = minor;
+            pub const light_gray = path;
+            pub const red = transit;
+        };
+        const M = color.ColorMap(Keys, Color);
+        const col = M.map(d.class) orelse color.from_hex(Color.gray);
+
+        self.draw(layer, feat, col, &self.surface0);
     }
 }
 pub fn render_transportation_name(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Transportation_name) void {
