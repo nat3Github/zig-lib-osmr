@@ -21,7 +21,7 @@
         },
         .dotenv = .{
             .url = "https://github.com/nat3Github/zig-lib-dotenv/archive/refs/heads/main.tar.gz",
-            .hash = "dotenv-0.1.1-MkB8yOkVAADFYZu2cwlmJXu7c8eP9qiF69HiOClLEZNi",
+            .hash = "dotenv-0.1.1-MkB8yLoYAACyIR_dxGLegB6-_QsueXKBHYQ3OQd6yNBT",
         },
     },
     .paths = .{

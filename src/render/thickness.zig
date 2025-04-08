@@ -9,7 +9,7 @@ pub const StandardSizes = struct {
     pub const M = 1.5;
     pub const L = 2.0;
     pub const XL = 3.0;
-    pub const XXL = 5.0;
+    pub const XXL = 4.5;
 };
 
 fn comptime_parse_float(comptime number: []const u8) f64 {

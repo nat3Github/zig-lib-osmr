@@ -98,6 +98,7 @@ inline fn swallow_error(res: anyerror!void) void {
     _ = res catch |e| std.log.err("error: {}", .{e});
 }
 alloc: Allocator,
+arena: std.heap.ArenaAllocator,
 surface0: z2d.Surface,
 context0: ?z2d.Context = null,
 counter: usize = 0,
@@ -133,6 +134,26 @@ const RenderConfig = struct {
         .toggle_boundary = true,
         .toggle_aeroway = true,
     };
+    pub const All = RenderConfig{
+        .toggle_landcover = true,
+        .toggle_water = true,
+        .toggle_waterway = true,
+
+        .toggle_transportation = true,
+        .toggle_transportation_name = true,
+        .toggle_building = true,
+        .toggle_aeroway = true,
+        .toggle_boundary = true,
+
+        .toggle_aerodrome_label = true,
+        .toggle_housenumber = true,
+        .toggle_landuse = true,
+        .toggle_mountain_peak = true,
+        .toggle_park = true,
+        .toggle_place = true,
+        .toggle_poi = true,
+        .toggle_water_name = true,
+    };
     pub const LandAndWater = RenderConfig{
         .toggle_landcover = true,
         .toggle_water = true,
@@ -150,6 +171,7 @@ const RenderConfig = struct {
 pub fn init(alloc: Allocator, width_height: u32) !This {
     return This{
         .alloc = alloc,
+        .arena = std.heap.ArenaAllocator.init(alloc),
         .surface0 = try z2d.Surface.init(
             .image_surface_rgb,
             alloc,
@@ -158,14 +180,26 @@ pub fn init(alloc: Allocator, width_height: u32) !This {
         ),
     };
 }
-fn set_context(self: *This) void {
-    self.context0 = z2d.Context.init(self.alloc, &self.surface0);
-}
 
 pub fn deinit(self: *This) void {
     const alloc = self.alloc;
     self.surface0.deinit(alloc);
-    self.context0.deinit();
+    if (self.context0 != null) {
+        self.arena.deinit();
+    }
+}
+pub fn set_background(self: *This, pixel: color) void {
+    const width_height: usize = @intCast(self.surface0.getWidth());
+    const r, const g, const b = pixel.rgb();
+    for (0..width_height) |x| {
+        for (0..width_height) |y| {
+            self.surface0.putPixel(
+                @intCast(x),
+                @intCast(y),
+                z2d.Pixel{ .rgb = .{ .r = r, .g = g, .b = b } },
+            );
+        }
+    }
 }
 
 inline fn draw(self: *This, layer: *const Layer, feat: *const Feature, col: color, line_width: f64) void {
@@ -226,13 +260,13 @@ pub fn render_aerodrome_label(self: *This, layer: *const Layer, feat: *const Fea
     _ = .{ feat, self, d, layer };
 }
 pub fn render_boundary(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Boundary) void {
-    const col = color.from_hex(Tailwind.zinc300);
-    const line_width = Line.StandardSizes.L;
+    const col = color.from_hex(Tailwind.zinc400);
+    const line_width = Line.StandardSizes.XL;
     _ = d;
     self.draw(layer, feat, col, line_width);
 }
 pub fn render_building(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Building) void {
-    const default_col = color.from_hex(Tailwind.slate300);
+    const default_col = color.from_hex(Tailwind.slate200);
     const col = color.convert_hex(d.colour) catch default_col;
     self.draw(layer, feat, col, 2.0);
 }
@@ -243,41 +277,132 @@ pub fn render_landcover(self: *This, layer: *const Layer, feat: *const Feature, 
     const Keys = struct {
         pub const cyan100 = &.{"ice"};
         pub const zinc500 = &.{"rock"};
-        pub const green500 = &.{"wood"};
+        pub const green400 = &.{"wood"};
         pub const lime300 = &.{"grass"};
         pub const yellow200 = &.{"sand"};
-        pub const lime500 = &.{"farmland"};
-        pub const lime700 = &.{"wetland"};
+        pub const green200 = &.{"farmland"};
+        pub const amber300 = &.{"wetland"};
     };
     const col = color.ColorMap(Keys, Tailwind).map(d.class) orelse color.from_hex(Tailwind.green300);
     self.draw(layer, feat, col, 1.0);
 }
 
 pub fn render_landuse(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Landuse) void {
-    _ = .{ feat, self, d, layer };
+    const t = feat.type orelse return;
+    switch (t) {
+        .POLYGON, .LINESTRING => {
+            const Keys = struct {
+                pub const red100 = &.{
+                    "railway",
+                };
+                pub const slate300 = &.{
+                    "cemetery",
+                    "quarry",
+                };
+                pub const emerald600 = &.{
+                    "military",
+                    "dam",
+                };
+                pub const rose100 = &.{
+                    "residential",
+                    "suburb",
+                    "quarter",
+                    "neighbourhood",
+                };
+                pub const yellow200 = &.{
+                    "commercial",
+                    "industrial",
+                    "retail",
+                };
+                pub const zinc200 = &.{
+                    "garages",
+                    "pitch",
+                    "track",
+                };
+                pub const fuchsia200 = &.{
+                    "stadium",
+                    "playground",
+                    "theme_park",
+                    "zoo",
+                };
+
+                pub const pink200 = &.{
+                    "hospital",
+                };
+
+                pub const green200 = &.{
+                    "kindergarten",
+                    "school",
+                    "university",
+                    "college",
+                    "library",
+                };
+
+                pub const orange300 = &.{
+                    "bus_station",
+                };
+            };
+
+            const col = color.ColorMap(Keys, Tailwind).map(d.class) orelse return self.log_any(d.*);
+            //color.from_hex(Tailwind.blue500);
+
+            self.draw(layer, feat, col, 2.0);
+        },
+        else => return,
+    }
 }
 pub fn render_mountain_peak(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Mountain_peak) void {
-    _ = .{ feat, self, d, layer };
+    const t = feat.type orelse return;
+    switch (t) {
+        .POLYGON, .LINESTRING => {
+            self.log_any(d.*);
+        },
+        else => return,
+    }
+    _ = .{layer};
 }
 pub fn render_park(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Park) void {
-    _ = .{ feat, self, d, layer };
+    const t = feat.type orelse return;
+    switch (t) {
+        .POLYGON, .LINESTRING => {
+            self.draw(layer, feat, .from_hex(Tailwind.green300), 3.0);
+            // self.log_any(d.*);
+            _ = d;
+        },
+        else => return,
+    }
+    _ = .{layer};
 }
 /// not implemented because this draws points with text no poly / lines
 pub fn render_place(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Place) void {
-    _ = .{ feat, self, d, layer };
+    const t = feat.type orelse return;
+    switch (t) {
+        .POLYGON, .LINESTRING => {
+            self.log_any(d.*);
+        },
+        else => return,
+    }
+    _ = .{layer};
 }
 pub fn render_poi(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Poi) void {
-    _ = .{ feat, self, d, layer };
+    const t = feat.type orelse return;
+    switch (t) {
+        .POLYGON, .LINESTRING => {
+            self.log_any(d.*);
+        },
+        else => return,
+    }
+    _ = .{layer};
 }
-pub fn render_transportation(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Transportation) void {
+fn render_transport(self: *This, layer: *const Layer, feat: *const Feature, key: []const u8) void {
     const Keys = struct {
-        pub const violet800 = &.{
+        pub const violet300 = &.{
             "motorway",
             "trunk",
             "motorway_construction",
             "trunk_construction",
         };
-        pub const slate800 = &.{
+        pub const slate400 = &.{
             "primary",
             "secondary",
             "tertiary",
@@ -285,39 +410,52 @@ pub fn render_transportation(self: *This, layer: *const Layer, feat: *const Feat
             "secondary_construction",
             "tertiary_construction",
         };
-        pub const gray700 = &.{
+        pub const gray400 = &.{
             "minor",
             "service",
             "minor_construction",
             "service_construction",
         };
         pub const stone400 = &.{
-            "path",
             "track",
-            "raceway",
-            "path_construction",
             "track_construction",
+        };
+        pub const emerald600 = &.{
+            "path",
+            "path_construction",
+        };
+        pub const red300 = &.{
+            "raceway",
             "raceway_construction",
+        };
+        pub const neutral500 = &.{
             "bridge",
             "pier",
         };
-        pub const rose800 = &.{
-            "transit",
+        pub const rose400 = &.{
+            "rail",
+        };
+        pub const indigo300 = &.{
+            "ferry",
+        };
+        pub const orange300 = &.{
             "busway",
             "bus_guideway",
-            "ferry",
+        };
+        pub const rose600 = &.{
+            "transit",
         };
     };
     const Thickness = struct {
-        pub const xxl = &.{
+        pub const xl = &.{
             "motorway",
             "trunk",
             "motorway_construction",
             "trunk_construction",
             "primary",
             "primary_construction",
-        };
-        pub const xl = &.{
+
+            "rail",
             "secondary",
             "secondary_construction",
             "tertiary",
@@ -344,146 +482,107 @@ pub fn render_transportation(self: *This, layer: *const Layer, feat: *const Feat
             "raceway_construction",
         };
     };
-    const linewidth = Line.line_width(Thickness, d.class) orelse return self.log_any(d.class);
+    const linewidth = Line.line_width(Thickness, key) orelse return self.log_any(key);
     const M = color.ColorMap(Keys, Tailwind);
-    const col = M.map(d.class) orelse return self.log_any(d.class);
+    const col = M.map(key) orelse return self.log_any(key);
     self.draw(layer, feat, col, linewidth);
+}
+
+pub fn render_transportation(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Transportation) void {
+    self.render_transport(layer, feat, d.class);
 }
 pub fn render_transportation_name(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Transportation_name) void {
-    const Keys = struct {
-        pub const violet800 = &.{
-            "trunk",
-            "motorway_construction",
-            "trunk_construction",
-        };
-        pub const slate600 = &.{
-            "primary",
-            "primary_construction",
-            "secondary",
-            "secondary_construction",
-            "tertiary",
-            "tertiary_construction",
-        };
-        pub const gray500 = &.{
-            "minor",
-            "service",
-            "minor_construction",
-            "service_construction",
-        };
-        pub const stone500 = &.{
-            "track",
-            "track_construction",
-        };
-        pub const lime600 = &.{
-            "path",
-            "path_construction",
-        };
-        pub const orange700 = &.{
-            "raceway",
-            "raceway_construction",
-        };
-        pub const red700 = &.{
-            "rail",
-            "transit",
-        };
-    };
-    const Thickness = struct {
-        pub const xxl = &.{
-            "trunk",
-            "motorway_construction",
-            "trunk_construction",
-        };
-        pub const xl = &.{
-            "primary",
-            "primary_construction",
-            "secondary",
-            "secondary_construction",
-            "tertiary",
-            "tertiary_construction",
-        };
-        pub const l = &.{
-            "minor",
-            "service",
-            "minor_construction",
-            "service_construction",
-
-            "rail",
-            "transit",
-        };
-        pub const m = &.{
-            "track",
-            "track_construction",
-            "path",
-            "path_construction",
-            "raceway",
-            "raceway_construction",
-        };
-    };
-    // std.log.warn("{s} index: {}", .{ d.name, self.counter });
-    const linewidth = Line.line_width(Thickness, d.class) orelse return self.log_any(d.*);
-    const M = color.ColorMap(Keys, Tailwind);
-    const col = M.map(d.class) orelse return self.log_any(d.*); //color.from_hex(Color.gray);
-    self.draw(layer, feat, col, linewidth);
+    self.render_transport(layer, feat, d.class);
 }
-pub fn render_water(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Water) void {
+inline fn water_layer(self: *This, layer: *const Layer, feat: *const Feature, d: []const u8) void {
     const Keys = struct {
         pub const sky300 = &.{"river"};
         pub const teal400 = &.{"pond"};
         pub const cyan500 = &.{ "dock", "swimming_pool" };
         pub const blue500 = &.{"lake"};
-        pub const cyan800 = &.{"ocean"};
+        pub const teal600 = &.{"ocean"};
     };
-    const col = color.ColorMap(Keys, Tailwind).map(d.class) orelse color.from_hex(Tailwind.blue500);
+    const col = color.ColorMap(Keys, Tailwind).map(d) orelse color.from_hex(Tailwind.blue500);
     self.draw(layer, feat, col, 2.0);
 }
+pub fn render_water(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Water) void {
+    self.water_layer(layer, feat, d.class);
+}
 pub fn render_water_name(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Water_name) void {
-    _ = .{ feat, self, d, layer };
+    const t = feat.type orelse return;
+    switch (t) {
+        .POLYGON, .LINESTRING => {
+            self.water_layer(layer, feat, d.class);
+        },
+        else => return,
+    }
 }
 pub fn render_waterway(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Waterway) void {
     const Keys = struct {
         pub const teal400 = &.{"stream"};
         pub const blue500 = &.{"river"};
-        pub const cyan800 = &.{"canal"};
-        pub const teal950 = &.{ "drain", "ditch" };
+        pub const cyan700 = &.{"canal"};
+        pub const teal800 = &.{ "drain", "ditch" };
     };
     const col = color.ColorMap(Keys, Tailwind).map(d.class) orelse color.from_hex(Tailwind.blue500);
     self.draw(layer, feat, col, 2.0);
 }
 
-fn make_traverser(config: RenderConfig) Traverser {
-    return Traverser{
-        .aeroway = if (config.toggle_aeroway) render_aeroway else null,
-        .aerodrome_label = if (config.toggle_aerodrome_label) render_aerodrome_label else null,
-        .boundary = if (config.toggle_boundary) render_boundary else null,
-        .building = if (config.toggle_building) render_building else null,
-        .housenumber = if (config.toggle_housenumber) render_housenumber else null,
-        .landcover = if (config.toggle_landcover) render_landcover else null,
-        .landuse = if (config.toggle_landuse) render_landuse else null,
-        .mountain_peak = if (config.toggle_mountain_peak) render_mountain_peak else null,
-        .park = if (config.toggle_park) render_park else null,
-        .place = if (config.toggle_place) render_place else null,
-        .poi = if (config.toggle_poi) render_poi else null,
-        .transportation = if (config.toggle_transportation) render_transportation else null,
-        .transportation_name = if (config.toggle_transportation_name) render_transportation_name else null,
-        .water = if (config.toggle_water) render_water else null,
-        .water_name = if (config.toggle_water_name) render_water_name else null,
-        .waterway = if (config.toggle_waterway) render_waterway else null,
-    };
+fn set_context(self: *This) void {
+    if (self.context0 != null) {
+        _ = self.arena.reset(.retain_capacity);
+        self.context0 = null;
+    }
+    const alloc = self.arena.allocator();
+    self.context0 = z2d.Context.init(alloc, &self.surface0);
 }
-pub fn render(self: *This, tile: *const dec.Tile, config: RenderConfig) void {
-    if (self.context0 == null) self.set_context();
-    const traverser = make_traverser(config);
-    traverser.traverse_tile(tile, self);
-}
-test "test render all zoom" {
-    if (true) return;
-    const balloc = std.testing.allocator;
-    var arena = std.heap.ArenaAllocator.init(balloc);
-    defer arena.deinit();
 
-    const render_list: []const []const u8 = &.{ "leipzig", "new_york" };
+pub fn render(self: *This, tile: *const dec.Tile) !void {
+    self.set_context();
+    const RenderAll = struct {
+        landuse: *const fn (*This, *const Layer, *const Feature, *const dec.Landuse) void = render_landuse,
+        water: *const fn (*This, *const Layer, *const Feature, *const dec.Water) void = render_water,
+        water_name: *const fn (*This, *const Layer, *const Feature, *const dec.Water_name) void = render_water_name,
+        waterway: *const fn (*This, *const Layer, *const Feature, *const dec.Waterway) void = render_waterway,
+
+        park: *const fn (*This, *const Layer, *const Feature, *const dec.Park) void = render_park,
+        place: *const fn (*This, *const Layer, *const Feature, *const dec.Place) void = render_place,
+        landcover: *const fn (*This, *const Layer, *const Feature, *const dec.Landcover) void = render_landcover,
+
+        aeroway: *const fn (*This, *const Layer, *const Feature, *const dec.Aeroway) void = render_aeroway,
+        aerodrome_label: *const fn (*This, *const Layer, *const Feature, *const dec.Aerodrome_label) void = render_aerodrome_label,
+
+        transportation: *const fn (*This, *const Layer, *const Feature, *const dec.Transportation) void = render_transportation,
+        transportation_name: *const fn (*This, *const Layer, *const Feature, *const dec.Transportation_name) void = render_transportation_name,
+
+        boundary: *const fn (*This, *const Layer, *const Feature, *const dec.Boundary) void = render_boundary,
+
+        // mountain_peak: *const fn (*This, *const Layer, *const Feature, *const dec.Mountain_peak) void = render_mountain_peak,
+        building: *const fn (*This, *const Layer, *const Feature, *const dec.Building) void = render_building,
+        // poi: *const fn (*This, *const Layer, *const Feature, *const dec.Poi) void = render_poi,
+        // housenumber: *const fn (*This, *const Layer, *const Feature, *const dec.Housenumber) void = render_housenumber,
+    };
+    try dec.traverse_tile(This, self, tile, RenderAll{});
+}
+
+test "test render all zoom" {
+    if (false) return;
+    const gpa = std.testing.allocator;
+    const width_height = 1024;
+    var rend = try This.init(gpa, width_height);
+    defer rend.deinit();
+
+    const zoom_level = .{ 0, 16 };
+
+    const render_list: []const []const u8 = &.{
+        "leipzig",
+        "new_york",
+    };
+
     inline for (render_list) |city| {
-        inline for (14..15) |zoom| {
+        inline for (zoom_level[0]..zoom_level[1]) |zoom| {
+            var arena = std.heap.ArenaAllocator.init(gpa);
+            defer arena.deinit();
             const alloc = arena.allocator();
             const zoom_str = city ++ std.fmt.comptimePrint("_z{}", .{zoom});
             const tile_subpath = "./testdata/" ++ zoom_str;
@@ -492,20 +591,9 @@ test "test render all zoom" {
             var file = try std.fs.cwd().openFile(tile_subpath, .{});
             const input = try file.reader().readAllAlloc(alloc, 10 * 1024 * 1024);
             const tile: dec.Tile = try dec.decode(input, alloc);
-            const width_height = 1024;
-            var rend = try This.init(alloc, width_height);
-            for (0..width_height) |x| {
-                for (0..width_height) |y| {
-                    rend.surface0.putPixel(
-                        @intCast(x),
-                        @intCast(y),
-                        z2d.Pixel{ .rgb = .{ .r = 255, .g = 255, .b = 255 } },
-                    );
-                }
-            }
-            rend.render(&tile, .StreetsAndBuildings);
+            rend.set_background(.from_hex(Tailwind.white));
+            try rend.render(&tile);
             try z2d.png_exporter.writeToPNGFile(rend.surface0, output_subpath, .{});
-            _ = arena.reset(.retain_capacity);
         }
     }
 }
@@ -532,7 +620,7 @@ test "test render 1" {
             );
         }
     }
-    rend.render(&tile, .StreetsAndBuildings);
+    try rend.render(&tile);
 
     try z2d.png_exporter.writeToPNGFile(rend.surface0, "./testdata/surface0.png", .{});
 }

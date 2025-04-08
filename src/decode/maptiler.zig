@@ -22,12 +22,13 @@ pub fn downloadTile(
     var client = std.http.Client{ .allocator = allocator };
     defer client.deinit();
 
-    var url_buffer: [256]u8 = undefined;
+    var url_buffer: [1024]u8 = undefined;
     const url_str = try std.fmt.bufPrint(
         &url_buffer,
-        "https://api.maptiler.com/tiles/v3/{d}/{d}/{d}.pbf?key={s}",
+        "https://api.maptiler.com/tiles/v3/{}/{}/{}.pbf?key={s}",
         .{ zoom, x, y, api_key },
     );
+    // std.log.warn("url req: {s}", .{url_str});
     var server_header_buffer: [1024]u8 = undefined;
     const url = try std.Uri.parse(url_str);
     var req = try client.open(.GET, url, .{
@@ -38,7 +39,6 @@ pub fn downloadTile(
     try req.wait();
     std.log.warn("{}", .{req.response.status});
     const body = try req.reader().readAllAlloc(allocator, 10 * 1024 * 1024); // 10 MB limit
-
     return body;
 }
 
@@ -61,7 +61,9 @@ fn debug_write_tile(
     defer file.close();
 }
 
+// NOTE: zoom level on maptiler is ok from 0 to 15
 test "download tile 2" {
+    if (true) return;
     const Env = @import("dotenv");
     const alloc = std.testing.allocator;
     var env_file = try std.fs.cwd().openFile("src/decode/.env", .{});
@@ -71,15 +73,6 @@ test "download tile 2" {
     var env = try Env.init(alloc, env_content);
     defer env.deinit();
     const api_key = env.get("maptiler_api_key");
-    {
-        const city = "leipzig";
-        const lat = 51.34;
-        const lon = 12.36;
-        const zoom = 14;
-        const name = std.fmt.comptimePrint(city ++ "_z{}", .{zoom});
-        try debug_write_tile(lat, lon, zoom, api_key.?, std.fs.cwd(), "testdata/" ++ name);
-    }
-    if (true) return;
 
     if (api_key) |key| {
         {
@@ -87,7 +80,7 @@ test "download tile 2" {
             const city = "leipzig";
             const lat = 51.34;
             const lon = 12.36;
-            inline for (0..18) |zoom| {
+            inline for (0..16) |zoom| {
                 const name = std.fmt.comptimePrint(city ++ "_z{}", .{zoom});
                 try debug_write_tile(lat, lon, zoom, key, std.fs.cwd(), "testdata/" ++ name);
             }
@@ -97,7 +90,7 @@ test "download tile 2" {
             const city = "new_york";
             const lat = 40.64;
             const lon = -73.79;
-            inline for (0..18) |zoom| {
+            inline for (0..16) |zoom| {
                 const name = std.fmt.comptimePrint(city ++ "_z{}", .{zoom});
                 try debug_write_tile(lat, lon, zoom, key, std.fs.cwd(), "testdata/" ++ name);
             }

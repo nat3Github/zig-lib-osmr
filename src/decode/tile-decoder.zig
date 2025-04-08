@@ -26,17 +26,17 @@ test "tile 1" {
         const This = @This();
         alloc: Allocator,
         fn handle_transportation(self: *This, layer: *const Layer, feat: *const Feature, d: *const Transportation) void {
+            // std.log.warn("handle transportation", .{});
             _ = .{ layer, feat, d, self };
         }
-    };
-    const XXTraverser = LayerTraverser(XX);
-    const traverser = XXTraverser{
-        .transportation = XX.handle_transportation,
+        const order = struct {
+            transportation: *const fn (*This, *const Layer, *const Feature, *const Transportation) void = handle_transportation,
+        };
     };
     var xx = XX{
         .alloc = alloc,
     };
-    traverser.traverse_tile(&tile, &xx);
+    try traverse_tile(XX, &xx, &tile, XX.order{});
 }
 
 pub fn print_any(t: anytype, alloc: Allocator) ![]const u8 {
@@ -70,114 +70,68 @@ pub fn print_any(t: anytype, alloc: Allocator) ![]const u8 {
     }
     return slist.items;
 }
-pub fn LayerTraverser(T: type) type {
-    return struct {
-        const This = @This();
-        aeroway: ?*const fn (*T, *const Layer, *const Feature, *const Aeroway) void = null,
-        aerodrome_label: ?*const fn (*T, *const Layer, *const Feature, *const Aerodrome_label) void = null,
-        boundary: ?*const fn (*T, *const Layer, *const Feature, *const Boundary) void = null,
-        building: ?*const fn (*T, *const Layer, *const Feature, *const Building) void = null,
-        housenumber: ?*const fn (*T, *const Layer, *const Feature, *const Housenumber) void = null,
-        landcover: ?*const fn (*T, *const Layer, *const Feature, *const Landcover) void = null,
-        landuse: ?*const fn (*T, *const Layer, *const Feature, *const Landuse) void = null,
-        mountain_peak: ?*const fn (*T, *const Layer, *const Feature, *const Mountain_peak) void = null,
-        park: ?*const fn (*T, *const Layer, *const Feature, *const Park) void = null,
-        place: ?*const fn (*T, *const Layer, *const Feature, *const Place) void = null,
-        poi: ?*const fn (*T, *const Layer, *const Feature, *const Poi) void = null,
-        transportation: ?*const fn (*T, *const Layer, *const Feature, *const Transportation) void = null,
-        transportation_name: ?*const fn (*T, *const Layer, *const Feature, *const Transportation_name) void = null,
-        water: ?*const fn (*T, *const Layer, *const Feature, *const Water) void = null,
-        water_name: ?*const fn (*T, *const Layer, *const Feature, *const Water_name) void = null,
-        waterway: ?*const fn (*T, *const Layer, *const Feature, *const Waterway) void = null,
+const LayerNames = &.{
+    "aeroway",
+    "aerodrome_label",
+    "boundary",
+    "building",
+    "housenumber",
+    "landcover",
+    "landuse",
+    "mountain_peak",
+    "park",
+    "place",
+    "poi",
+    "transportation",
+    "transportation_name",
+    "water",
+    "water_name",
+    "waterway",
+};
+/// NOTE: the definition follows the OpenMapTiles Schema (CC-BY) https://openmaptiles.org/schema/
+/// MapTiler is based on the OpenMapTiles Schema
+const LayerSchema = struct {
+    pub const aeroway: void = undefined;
+    pub const aerodrome_label: void = undefined;
+    pub const boundary: void = undefined;
+    pub const building: void = undefined;
+    pub const housenumber: void = undefined;
+    pub const landcover: void = undefined;
+    pub const landuse: void = undefined;
+    pub const mountain_peak: void = undefined;
+    pub const park: void = undefined;
+    pub const place: void = undefined;
+    pub const poi: void = undefined;
+    pub const transportation: void = undefined;
+    pub const transportation_name: void = undefined;
+    pub const water: void = undefined;
+    pub const water_name: void = undefined;
+    pub const waterway: void = undefined;
+};
 
-        pub fn traverse_tile(self: *const This, tile: *const Tile, t: *T) void {
-            for (tile.layers.items) |layer| {
-                const en = LayerEnum.init(&layer) catch continue;
-                switch (en) {
-                    .aeroway => {
-                        if (self.aeroway) |cb| {
-                            comptime_parse_struct(Aeroway, t, &layer, cb);
-                        }
-                    },
-                    .aerodrome_label => {
-                        if (self.aerodrome_label) |cb| {
-                            comptime_parse_struct(Aerodrome_label, t, &layer, cb);
-                        }
-                    },
-                    .boundary => {
-                        if (self.boundary) |cb| {
-                            comptime_parse_struct(Boundary, t, &layer, cb);
-                        }
-                    },
-                    .building => {
-                        if (self.building) |cb| {
-                            comptime_parse_struct(Building, t, &layer, cb);
-                        }
-                    },
-                    .housenumber => {
-                        if (self.housenumber) |cb| {
-                            comptime_parse_struct(Housenumber, t, &layer, cb);
-                        }
-                    },
-                    .landcover => {
-                        if (self.landcover) |cb| {
-                            comptime_parse_struct(Landcover, t, &layer, cb);
-                        }
-                    },
-                    .landuse => {
-                        if (self.landuse) |cb| {
-                            comptime_parse_struct(Landuse, t, &layer, cb);
-                        }
-                    },
-                    .mountain_peak => {
-                        if (self.mountain_peak) |cb| {
-                            comptime_parse_struct(Mountain_peak, t, &layer, cb);
-                        }
-                    },
-                    .park => {
-                        if (self.park) |cb| {
-                            comptime_parse_struct(Park, t, &layer, cb);
-                        }
-                    },
-                    .place => {
-                        if (self.place) |cb| {
-                            comptime_parse_struct(Place, t, &layer, cb);
-                        }
-                    },
-                    .poi => {
-                        if (self.poi) |cb| {
-                            comptime_parse_struct(Poi, t, &layer, cb);
-                        }
-                    },
-                    .transportation => {
-                        if (self.transportation) |cb| {
-                            comptime_parse_struct(Transportation, t, &layer, cb);
-                        }
-                    },
-                    .transportation_name => {
-                        if (self.transportation_name) |cb| {
-                            comptime_parse_struct(Transportation_name, t, &layer, cb);
-                        }
-                    },
-                    .water => {
-                        if (self.water) |cb| {
-                            comptime_parse_struct(Water, t, &layer, cb);
-                        }
-                    },
-                    .water_name => {
-                        if (self.water_name) |cb| {
-                            comptime_parse_struct(Water_name, t, &layer, cb);
-                        }
-                    },
-                    .waterway => {
-                        if (self.waterway) |cb| {
-                            comptime_parse_struct(Waterway, t, &layer, cb);
-                        }
-                    },
-                }
+pub fn traverse_tile(T: type, t: *T, tile: *const Tile, comptime order: anytype) !void {
+    const layer_items = tile.layers.items;
+    const order_fields = comptime @typeInfo(@TypeOf(order)).@"struct".fields;
+
+    const layer_names: []const []const u8 = LayerNames;
+    if (layer_items.len > layer_names.len) {
+        std.log.warn("unexpected layer len {}", .{layer_items.len});
+    }
+
+    inline for (order_fields) |field| {
+        const field_name: []const u8 = field.name;
+        for (layer_items) |layer| {
+            const layer_name = layer.name.getSlice();
+            if (std.mem.eql(u8, field_name, layer_name)) {
+                _ = @hasDecl(LayerSchema, field.name);
+                const f = @field(order, field.name);
+                const ptr = @typeInfo(@TypeOf(f)).pointer.child;
+                const p4 = @typeInfo(ptr).@"fn".params[3].type.?;
+                const DataT = @typeInfo(p4).pointer.child;
+                comptime_parse_struct(DataT, t, &layer, f);
             }
         }
-    };
+    }
 }
 
 const KViterator = struct {
@@ -303,7 +257,7 @@ const Brunnel = enum {
     ford,
 };
 
-pub fn comptime_parse_struct(T: type, tpointer: anytype, layer: *const Layer, callback: *const fn (@TypeOf(tpointer), *const Layer, *const Feature, *const T) void) void {
+pub inline fn comptime_parse_struct(T: type, tpointer: anytype, layer: *const Layer, callback: *const fn (@TypeOf(tpointer), *const Layer, *const Feature, *const T) void) void {
     const features: []Tile.Feature = layer.features.items;
     for (features) |feature| {
         var t = T{};
@@ -360,120 +314,6 @@ pub fn comptime_parse_struct(T: type, tpointer: anytype, layer: *const Layer, ca
         callback(tpointer, layer, &feature, &t);
     }
 }
-
-/// NOTE: the definition follows the OpenMapTiles Schema (CC-BY) https://openmaptiles.org/schema/
-/// MapTiler is based on the OpenMapTiles Schema
-pub const LayerDef = struct {
-    const aeroway = "aeroway";
-    const aerodrome_label = "aerodrome_label";
-    const boundary = "boundary";
-    const building = "building";
-    const housenumber = "housenumber";
-    const landcover = "landcover";
-    const landuse = "landuse";
-    const mountain_peak = "mountain_peak";
-    const park = "park";
-    const place = "place";
-    const poi = "poi";
-    const transportation = "transportation";
-    const transportation_name = "transportation_name";
-    const water = "water";
-    const water_name = "water_name";
-    const waterway = "waterway";
-};
-
-const LayerEnum = enum {
-    aeroway,
-    aerodrome_label,
-    boundary,
-    building,
-    housenumber,
-    landcover,
-    landuse,
-    mountain_peak,
-    park,
-    place,
-    poi,
-    transportation,
-    transportation_name,
-    water,
-    water_name,
-    waterway,
-
-    pub fn init(layer: *const Layer) !LayerEnum {
-        const s = layer.name.getSlice();
-        const eql = std.mem.eql;
-        if (eql(u8, "aeroway", s)) {
-            return .aeroway;
-        }
-        if (eql(u8, "aerodrome_label", s)) {
-            return .aerodrome_label;
-        }
-        if (eql(u8, "boundary", s)) {
-            return .boundary;
-        }
-        if (eql(u8, "building", s)) {
-            return .building;
-        }
-        if (eql(u8, "housenumber", s)) {
-            return .housenumber;
-        }
-        if (eql(u8, "landcover", s)) {
-            return .landcover;
-        }
-        if (eql(u8, "landuse", s)) {
-            return .landuse;
-        }
-        if (eql(u8, "mountain_peak", s)) {
-            return .mountain_peak;
-        }
-        if (eql(u8, "park", s)) {
-            return .park;
-        }
-        if (eql(u8, "place", s)) {
-            return .place;
-        }
-        if (eql(u8, "poi", s)) {
-            return .poi;
-        }
-        if (eql(u8, "transportation", s)) {
-            return .transportation;
-        }
-        if (eql(u8, "transportation_name", s)) {
-            return .transportation_name;
-        }
-        if (eql(u8, "water", s)) {
-            return .water;
-        }
-        if (eql(u8, "water_name", s)) {
-            return .water_name;
-        }
-        if (eql(u8, "waterway", s)) {
-            return .waterway;
-        }
-        return error.InvalidLayerFormat;
-    }
-    pub fn struct_type(self: *const LayerEnum) type {
-        return switch (self.*) {
-            .aeroway => Aeroway,
-            .aerodrome_label => Aerodrome_label,
-            .boundary => Boundary,
-            .building => Building,
-            .housenumber => Housenumber,
-            .landcover => Landcover,
-            .landuse => Landuse,
-            .mountain_peak => Mountain_peak,
-            .park => Park,
-            .place => Place,
-            .poi => Poi,
-            .transportation => Transportation,
-            .transportation_name => Transportation_name,
-            .water => Water,
-            .water_name => Water_name,
-            .waterway => Waterway,
-        };
-    }
-};
 
 pub const Cmd = enum {
     None,
