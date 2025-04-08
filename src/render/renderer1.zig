@@ -18,29 +18,17 @@ pub const Tailwind = @import("tailwind");
 const Line = root.thickness;
 
 const WRender = struct {
-    const Type = enum {
-        Polygon,
-        LineString,
-    };
+    const Type = enum { Polygon, LineString };
     x: i32 = 0,
     y: i32 = 0,
     debug: bool = false,
     extent: u32,
     ctx: *z2d.Context,
     rtype: Type = .Polygon,
-    pub fn render_geometry(
-        self: *WRender,
-        cmd_buffer: []u32,
-    ) void {
+    pub fn render_geometry(self: *WRender, cmd_buffer: []u32) void {
         self.x = 0;
         self.y = 0;
-        Cmd.decode(
-            cmd_buffer,
-            self,
-            close_path,
-            move_to,
-            line_to,
-        ) catch |e| {
+        Cmd.decode(cmd_buffer, self, close_path, move_to, line_to) catch |e| {
             std.log.err("cmd decode error: {}", .{e});
             return;
         };
@@ -50,9 +38,6 @@ const WRender = struct {
                 swallow_error(self.ctx.stroke());
             },
         }
-    }
-    inline fn swallow_error(res: anyerror!void) void {
-        _ = res catch |e| std.log.err("error: {}", .{e});
     }
     fn close_path(self: *WRender) void {
         if (self.debug) std.log.warn("close path", .{});
@@ -83,6 +68,7 @@ const WRender = struct {
 
     inline fn clamped_xy(self: *WRender, x: i32, y: i32) struct { i32, i32 } {
         const img_width = self.ctx.surface.getWidth();
+        if (img_width < 1) std.debug.panic("img width was smaller than 1", .{});
         const clampedx = std.math.clamp(x, 0, img_width - 1);
         const clampedy = std.math.clamp(y, 0, img_width - 1);
         return .{ clampedx, clampedy };
@@ -108,9 +94,12 @@ const WRender = struct {
     }
 };
 
+inline fn swallow_error(res: anyerror!void) void {
+    _ = res catch |e| std.log.err("error: {}", .{e});
+}
 alloc: Allocator,
 surface0: z2d.Surface,
-context0: z2d.Context = undefined,
+context0: ?z2d.Context = null,
 counter: usize = 0,
 
 const RenderConfig = struct {
@@ -159,7 +148,7 @@ const RenderConfig = struct {
 };
 
 pub fn init(alloc: Allocator, width_height: u32) !This {
-    var t = This{
+    return This{
         .alloc = alloc,
         .surface0 = try z2d.Surface.init(
             .image_surface_rgb,
@@ -168,8 +157,9 @@ pub fn init(alloc: Allocator, width_height: u32) !This {
             @intCast(width_height),
         ),
     };
-    t.context0 = z2d.Context.init(alloc, &t.surface0);
-    return t;
+}
+fn set_context(self: *This) void {
+    self.context0 = z2d.Context.init(self.alloc, &self.surface0);
 }
 
 pub fn deinit(self: *This) void {
@@ -178,29 +168,31 @@ pub fn deinit(self: *This) void {
     self.context0.deinit();
 }
 
-inline fn draw(self: *This, layer: *const Layer, feat: *const Feature, col: color, line_width: f64, surface: *z2d.Surface) void {
-    const alloc = self.alloc;
-    const extent = get_extent(layer);
-    const geomtype = feat.type orelse .UNKNOWN;
-    const geo = feat.geometry.items;
-    var context = z2d.Context.init(alloc, surface);
-    defer context.deinit();
-    var ren = WRender{ .ctx = &context, .extent = extent };
-    switch (geomtype) {
-        .POINT => std.log.warn("point drawing not implemented", .{}),
-        .LINESTRING => {
-            ren.rtype = .LineString;
-            context.setLineWidth(line_width);
-        },
-        .POLYGON => {
-            ren.rtype = .Polygon;
-            context.setLineWidth(line_width);
-        },
-        else => return,
+inline fn draw(self: *This, layer: *const Layer, feat: *const Feature, col: color, line_width: f64) void {
+    assert(self.context0 != null);
+    if (self.context0) |*context| {
+        swallow_error(context.moveTo(0, 0));
+        context.resetPath();
+        const extent = get_extent(layer);
+        const geomtype = feat.type orelse .UNKNOWN;
+        const geo = feat.geometry.items;
+        var ren = WRender{ .ctx = context, .extent = extent };
+        switch (geomtype) {
+            .POINT => std.log.warn("point drawing not implemented", .{}),
+            .LINESTRING => {
+                ren.rtype = .LineString;
+                context.setLineWidth(line_width);
+            },
+            .POLYGON => {
+                ren.rtype = .Polygon;
+                context.setLineWidth(line_width);
+            },
+            else => return,
+        }
+        const r, const g, const b = col.rgb();
+        context.setSourceToPixel(.{ .rgb = .{ .r = r, .g = g, .b = b } });
+        ren.render_geometry(geo);
     }
-    const r, const g, const b = col.rgb();
-    context.setSourceToPixel(.{ .rgb = .{ .r = r, .g = g, .b = b } });
-    ren.render_geometry(geo);
 }
 
 inline fn get_extent(layer: *const Layer) u32 {
@@ -221,26 +213,14 @@ inline fn log_any(self: *This, t: anytype) void {
 
 pub fn render_aeroway(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Aeroway) void {
     const Keys = struct {
-        pub const sky100 = &.{
-            "aerodrome",
-        };
-        pub const neutral300 = &.{
-            "runway",
-            "taxiway",
-        };
-        pub const yellow100 = &.{
-            "apron",
-        };
-        pub const orange400 = &.{
-            "gate",
-        };
-        pub const amber300 = &.{
-            "heliport",
-            "helipad",
-        };
+        pub const sky100 = &.{"aerodrome"};
+        pub const neutral300 = &.{ "runway", "taxiway" };
+        pub const yellow100 = &.{"apron"};
+        pub const orange400 = &.{"gate"};
+        pub const amber300 = &.{ "heliport", "helipad" };
     };
     const col = color.ColorMap(Keys, Tailwind).map(d.class) orelse color.from_hex(Tailwind.neutral400);
-    self.draw(layer, feat, col, 1.0, &self.surface0);
+    self.draw(layer, feat, col, 1.0);
 }
 pub fn render_aerodrome_label(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Aerodrome_label) void {
     _ = .{ feat, self, d, layer };
@@ -249,12 +229,12 @@ pub fn render_boundary(self: *This, layer: *const Layer, feat: *const Feature, d
     const col = color.from_hex(Tailwind.zinc300);
     const line_width = Line.StandardSizes.L;
     _ = d;
-    self.draw(layer, feat, col, line_width, &self.surface0);
+    self.draw(layer, feat, col, line_width);
 }
 pub fn render_building(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Building) void {
     const default_col = color.from_hex(Tailwind.slate300);
     const col = color.convert_hex(d.colour) catch default_col;
-    self.draw(layer, feat, col, 2.0, &self.surface0);
+    self.draw(layer, feat, col, 2.0);
 }
 pub fn render_housenumber(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Housenumber) void {
     _ = .{ feat, self, d, layer };
@@ -270,7 +250,7 @@ pub fn render_landcover(self: *This, layer: *const Layer, feat: *const Feature, 
         pub const lime700 = &.{"wetland"};
     };
     const col = color.ColorMap(Keys, Tailwind).map(d.class) orelse color.from_hex(Tailwind.green300);
-    self.draw(layer, feat, col, 1.0, &self.surface0);
+    self.draw(layer, feat, col, 1.0);
 }
 
 pub fn render_landuse(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Landuse) void {
@@ -367,7 +347,7 @@ pub fn render_transportation(self: *This, layer: *const Layer, feat: *const Feat
     const linewidth = Line.line_width(Thickness, d.class) orelse return self.log_any(d.class);
     const M = color.ColorMap(Keys, Tailwind);
     const col = M.map(d.class) orelse return self.log_any(d.class);
-    self.draw(layer, feat, col, linewidth, &self.surface0);
+    self.draw(layer, feat, col, linewidth);
 }
 pub fn render_transportation_name(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Transportation_name) void {
     const Keys = struct {
@@ -393,8 +373,12 @@ pub fn render_transportation_name(self: *This, layer: *const Layer, feat: *const
         pub const stone500 = &.{
             "track",
             "track_construction",
+        };
+        pub const lime600 = &.{
             "path",
             "path_construction",
+        };
+        pub const orange700 = &.{
             "raceway",
             "raceway_construction",
         };
@@ -439,7 +423,7 @@ pub fn render_transportation_name(self: *This, layer: *const Layer, feat: *const
     const linewidth = Line.line_width(Thickness, d.class) orelse return self.log_any(d.*);
     const M = color.ColorMap(Keys, Tailwind);
     const col = M.map(d.class) orelse return self.log_any(d.*); //color.from_hex(Color.gray);
-    self.draw(layer, feat, col, linewidth, &self.surface0);
+    self.draw(layer, feat, col, linewidth);
 }
 pub fn render_water(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Water) void {
     const Keys = struct {
@@ -450,7 +434,7 @@ pub fn render_water(self: *This, layer: *const Layer, feat: *const Feature, d: *
         pub const cyan800 = &.{"ocean"};
     };
     const col = color.ColorMap(Keys, Tailwind).map(d.class) orelse color.from_hex(Tailwind.blue500);
-    self.draw(layer, feat, col, 2.0, &self.surface0);
+    self.draw(layer, feat, col, 2.0);
 }
 pub fn render_water_name(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Water_name) void {
     _ = .{ feat, self, d, layer };
@@ -463,11 +447,11 @@ pub fn render_waterway(self: *This, layer: *const Layer, feat: *const Feature, d
         pub const teal950 = &.{ "drain", "ditch" };
     };
     const col = color.ColorMap(Keys, Tailwind).map(d.class) orelse color.from_hex(Tailwind.blue500);
-    self.draw(layer, feat, col, 2.0, &self.surface0);
+    self.draw(layer, feat, col, 2.0);
 }
 
-pub fn render(self: *This, tile: *const dec.Tile, comptime config: RenderConfig) void {
-    const traverser = Traverser{
+fn make_traverser(config: RenderConfig) Traverser {
+    return Traverser{
         .aeroway = if (config.toggle_aeroway) render_aeroway else null,
         .aerodrome_label = if (config.toggle_aerodrome_label) render_aerodrome_label else null,
         .boundary = if (config.toggle_boundary) render_boundary else null,
@@ -485,10 +469,14 @@ pub fn render(self: *This, tile: *const dec.Tile, comptime config: RenderConfig)
         .water_name = if (config.toggle_water_name) render_water_name else null,
         .waterway = if (config.toggle_waterway) render_waterway else null,
     };
+}
+pub fn render(self: *This, tile: *const dec.Tile, config: RenderConfig) void {
+    if (self.context0 == null) self.set_context();
+    const traverser = make_traverser(config);
     traverser.traverse_tile(tile, self);
 }
 
-test "render 1" {
+test "test render 1" {
     const balloc = std.testing.allocator;
     var arena = std.heap.ArenaAllocator.init(balloc);
     defer arena.deinit();
@@ -508,7 +496,7 @@ test "render 1" {
             );
         }
     }
-    rend.render(&tile, .Implemented);
+    rend.render(&tile, .StreetsAndBuildings);
 
     try z2d.png_exporter.writeToPNGFile(rend.surface0, "./testdata/surface0.png", .{});
 }

@@ -26,15 +26,7 @@ test "tile 1" {
         const This = @This();
         alloc: Allocator,
         fn handle_transportation(self: *This, layer: *const Layer, feat: *const Feature, d: *const Transportation) void {
-            _ = .{
-                layer,
-                feat,
-                d,
-                self,
-            };
-            // std.log.warn("transportation: {s}", .{
-            //     print_any(d.*, self.alloc) catch "",
-            // });
+            _ = .{ layer, feat, d, self };
         }
     };
     const XXTraverser = LayerTraverser(XX);
