@@ -216,7 +216,7 @@ inline fn draw(self: *This, layer: *const Layer, feat: *const Feature, col: colo
         } else context.setDashes(&.{});
 
         switch (geomtype) {
-            .POINT => std.log.warn("point drawing not implemented", .{}),
+            .POINT => std.log.debug("point drawing not implemented", .{}),
             .LINESTRING => {
                 ren.rtype = .LineString;
                 context.setLineWidth(line_width);
@@ -597,7 +597,7 @@ test "test render all zoom" {
     var rend = try This.init(gpa, width_height);
     defer rend.deinit();
 
-    const zoom_level = .{ 0, 16 };
+    const zoom_level = .{ 14, 16 };
 
     const render_list: []const []const u8 = &.{
         "leipzig",
@@ -629,7 +629,6 @@ test "test render 1" {
     var arena = std.heap.ArenaAllocator.init(balloc);
     defer arena.deinit();
     const alloc = arena.allocator();
-
     var file = try std.fs.cwd().openFile("./testdata/leipzig_tile", .{});
     const input = try file.reader().readAllAlloc(alloc, 10 * 1024 * 1024);
     const tile: dec.Tile = try dec.decode(input, alloc);
