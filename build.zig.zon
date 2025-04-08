@@ -19,6 +19,10 @@
             .url = "https://github.com/nat3Github/lib-zig-tailwind-colors/archive/refs/heads/master.tar.gz",
             .hash = "tailwind-0.0.0-j7vJMfstAABem1tfro5C6lYqdrB_2ucHwjxoS-kYeTEa",
         },
+        .dotenv = .{
+            .url = "https://github.com/nat3Github/zig-lib-dotenv/archive/refs/heads/main.tar.gz",
+            .hash = "dotenv-0.1.1-MkB8yOkVAADFYZu2cwlmJXu7c8eP9qiF69HiOClLEZNi",
+        },
     },
     .paths = .{
         "build.zig",

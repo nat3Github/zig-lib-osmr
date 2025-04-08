@@ -36,6 +36,7 @@ pub fn downloadTile(
     defer req.deinit();
     try req.send();
     try req.wait();
+    std.log.warn("{}", .{req.response.status});
     const body = try req.reader().readAllAlloc(allocator, 10 * 1024 * 1024); // 10 MB limit
 
     return body;
@@ -46,7 +47,7 @@ fn debug_write_tile(
     lon: comptime_float,
     zoom: comptime_int,
     api_key: []const u8,
-    dir: *std.fs.Dir,
+    dir: std.fs.Dir,
     sub_path: []const u8,
 ) !void {
     const balloc = std.testing.allocator;
@@ -60,20 +61,51 @@ fn debug_write_tile(
     defer file.close();
 }
 
+test "download tile 2" {
+    const Env = @import("dotenv");
+    const alloc = std.testing.allocator;
+    var env_file = try std.fs.cwd().openFile("src/decode/.env", .{});
+    defer env_file.close();
+    const env_content = try env_file.readToEndAlloc(alloc, 1024 * 1024);
+    defer alloc.free(env_content);
+    var env = try Env.init(alloc, env_content);
+    defer env.deinit();
+    const api_key = env.get("maptiler_api_key");
+    {
+        const city = "leipzig";
+        const lat = 51.34;
+        const lon = 12.36;
+        const zoom = 14;
+        const name = std.fmt.comptimePrint(city ++ "_z{}", .{zoom});
+        try debug_write_tile(lat, lon, zoom, api_key.?, std.fs.cwd(), "testdata/" ++ name);
+    }
+    if (true) return;
+
+    if (api_key) |key| {
+        {
+            // leipzig
+            const city = "leipzig";
+            const lat = 51.34;
+            const lon = 12.36;
+            inline for (0..18) |zoom| {
+                const name = std.fmt.comptimePrint(city ++ "_z{}", .{zoom});
+                try debug_write_tile(lat, lon, zoom, key, std.fs.cwd(), "testdata/" ++ name);
+            }
+        }
+        {
+            // new york jfk airport
+            const city = "new_york";
+            const lat = 40.64;
+            const lon = -73.79;
+            inline for (0..18) |zoom| {
+                const name = std.fmt.comptimePrint(city ++ "_z{}", .{zoom});
+                try debug_write_tile(lat, lon, zoom, key, std.fs.cwd(), "testdata/" ++ name);
+            }
+        }
+    }
+}
 
 test "download tile" {
-    // const balloc = std.testing.allocator;
-    // var arena = std.heap.ArenaAllocator.init(balloc);
-    // defer arena.deinit();
-    // const alloc = arena.allocator();
     // const lat = 51.34;
     // const lon = 12.36;
-    // const zoom = 14;
-    // const xy = latLonToTile(lat, lon, zoom);
-    // const api_key = "kNlMrTKeak26oPcu5Upx";
-    // const data = try downloadTile(alloc, xy.x, xy.y, zoom, api_key);
-    // const cwd = std.fs.cwd();
-    // var file = try cwd.createFile("./testdata/leipzig_tile", .{});
-    // try file.writeAll(data);
-    // defer file.close();
 }

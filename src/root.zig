@@ -8,5 +8,5 @@ pub const color = @import("render/color.zig");
 pub const thickness = @import("render/thickness.zig");
 
 test "all" {
-    _ = .{Renderer};
+    _ = .{maptiler};
 }

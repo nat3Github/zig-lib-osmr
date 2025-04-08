@@ -475,12 +475,48 @@ pub fn render(self: *This, tile: *const dec.Tile, config: RenderConfig) void {
     const traverser = make_traverser(config);
     traverser.traverse_tile(tile, self);
 }
+test "test render all zoom" {
+    if (true) return;
+    const balloc = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(balloc);
+    defer arena.deinit();
+
+    const render_list: []const []const u8 = &.{ "leipzig", "new_york" };
+    inline for (render_list) |city| {
+        inline for (14..15) |zoom| {
+            const alloc = arena.allocator();
+            const zoom_str = city ++ std.fmt.comptimePrint("_z{}", .{zoom});
+            const tile_subpath = "./testdata/" ++ zoom_str;
+            const output_subpath = "./output/" ++ zoom_str ++ ".png";
+            std.log.warn("render: {s} to {s}", .{ tile_subpath, output_subpath });
+            var file = try std.fs.cwd().openFile(tile_subpath, .{});
+            const input = try file.reader().readAllAlloc(alloc, 10 * 1024 * 1024);
+            const tile: dec.Tile = try dec.decode(input, alloc);
+            const width_height = 1024;
+            var rend = try This.init(alloc, width_height);
+            for (0..width_height) |x| {
+                for (0..width_height) |y| {
+                    rend.surface0.putPixel(
+                        @intCast(x),
+                        @intCast(y),
+                        z2d.Pixel{ .rgb = .{ .r = 255, .g = 255, .b = 255 } },
+                    );
+                }
+            }
+            rend.render(&tile, .StreetsAndBuildings);
+            try z2d.png_exporter.writeToPNGFile(rend.surface0, output_subpath, .{});
+            _ = arena.reset(.retain_capacity);
+        }
+    }
+}
 
 test "test render 1" {
+    if (true) return;
     const balloc = std.testing.allocator;
     var arena = std.heap.ArenaAllocator.init(balloc);
     defer arena.deinit();
     const alloc = arena.allocator();
+
     var file = try std.fs.cwd().openFile("./testdata/leipzig_tile", .{});
     const input = try file.reader().readAllAlloc(alloc, 10 * 1024 * 1024);
     const tile: dec.Tile = try dec.decode(input, alloc);
