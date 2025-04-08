@@ -410,7 +410,7 @@ pub fn render_transportation_name(self: *This, layer: *const Layer, feat: *const
             "rail",
             "transit",
         };
-        pub const s = &.{
+        pub const m = &.{
             "track",
             "track_construction",
             "path",

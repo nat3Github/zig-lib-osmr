@@ -28,11 +28,6 @@ pub fn downloadTile(
         "https://api.maptiler.com/tiles/v3/{d}/{d}/{d}.pbf?key={s}",
         .{ zoom, x, y, api_key },
     );
-
-    // var req = try client.fetch(.{
-    //     .method = .GET,
-    //     .raw_uri = url,
-    // });
     var server_header_buffer: [1024]u8 = undefined;
     const url = try std.Uri.parse(url_str);
     var req = try client.open(.GET, url, .{
@@ -45,6 +40,26 @@ pub fn downloadTile(
 
     return body;
 }
+
+fn debug_write_tile(
+    lat: comptime_float,
+    lon: comptime_float,
+    zoom: comptime_int,
+    api_key: []const u8,
+    dir: *std.fs.Dir,
+    sub_path: []const u8,
+) !void {
+    const balloc = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(balloc);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+    const xy = latLonToTile(lat, lon, zoom);
+    const data = try downloadTile(alloc, xy.x, xy.y, zoom, api_key);
+    var file = try dir.createFile(sub_path, .{});
+    try file.writeAll(data);
+    defer file.close();
+}
+
 
 test "download tile" {
     // const balloc = std.testing.allocator;
