@@ -241,12 +241,14 @@ inline fn get_extent(layer: *const Layer) u32 {
     return extent;
 }
 inline fn log_any(self: *This, t: anytype) void {
-    const s = dec.print_any(t, self.alloc) catch |e| {
+    var arena = std.heap.ArenaAllocator.init(self.alloc);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+    const s = dec.print_any_leaky(t, alloc) catch |e| {
         std.log.err("failed to print log because of {}", .{e});
         return;
     };
     std.log.warn("{s}", .{s});
-    self.alloc.free(s);
 }
 
 pub fn render_aeroway(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Aeroway) void {
@@ -292,7 +294,7 @@ pub fn render_boundary(self: *This, layer: *const Layer, feat: *const Feature, d
     self.draw(layer, feat, col, line_width, dashed);
 }
 pub fn render_building(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Building) void {
-    const default_col = color.from_hex(Tailwind.slate300);
+    const default_col = color.from_hex(Tailwind.stone300);
     const col = color.convert_hex(d.colour) catch default_col;
     self.draw(layer, feat, col, 2.0, false);
 }
@@ -318,7 +320,7 @@ pub fn render_landuse(self: *This, layer: *const Layer, feat: *const Feature, d:
     switch (t) {
         .POLYGON, .LINESTRING => {
             const Keys = struct {
-                pub const red100 = &.{
+                pub const red200 = &.{
                     "railway",
                 };
                 pub const slate300 = &.{
@@ -329,7 +331,7 @@ pub fn render_landuse(self: *This, layer: *const Layer, feat: *const Feature, d:
                     "military",
                     "dam",
                 };
-                pub const rose100 = &.{
+                pub const amber100 = &.{
                     "residential",
                     "suburb",
                     "quarter",
@@ -422,7 +424,7 @@ pub fn render_poi(self: *This, layer: *const Layer, feat: *const Feature, d: *co
 }
 fn render_transport(self: *This, layer: *const Layer, feat: *const Feature, key: []const u8) void {
     const Keys = struct {
-        pub const violet300 = &.{
+        pub const purple300 = &.{
             "motorway",
             "trunk",
             "motorway_construction",
@@ -471,18 +473,19 @@ fn render_transport(self: *This, layer: *const Layer, feat: *const Feature, key:
         };
     };
     const Thickness = struct {
-        pub const xl = &.{
+        // pub const xl = &.{};
+        pub const l = &.{
             "motorway",
             "trunk",
             "motorway_construction",
             "trunk_construction",
+
             "primary",
             "primary_construction",
 
             "secondary",
             "secondary_construction",
-        };
-        pub const l = &.{
+
             "tertiary",
             "tertiary_construction",
             "minor",
@@ -523,7 +526,7 @@ inline fn water_layer(self: *This, layer: *const Layer, feat: *const Feature, d:
         pub const sky300 = &.{"river"};
         pub const teal300 = &.{"pond"};
         pub const cyan400 = &.{ "dock", "swimming_pool" };
-        pub const blue400 = &.{"lake"};
+        pub const blue300 = &.{"lake"};
         pub const teal400 = &.{"ocean"};
     };
     const col = color.ColorMap(Keys, Tailwind).map(d) orelse color.from_hex(Tailwind.blue500);
@@ -590,20 +593,15 @@ pub fn render(self: *This, tile: *const dec.Tile) !void {
     try dec.traverse_tile(This, self, tile, RenderAll{});
 }
 
-test "test render all zoom" {
-    if (false) return;
+fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, comptime_int }) !void {
     const gpa = std.testing.allocator;
     const width_height = 1024;
     var rend = try This.init(gpa, width_height);
     defer rend.deinit();
-
-    const zoom_level = .{ 14, 16 };
-
     const render_list: []const []const u8 = &.{
         "leipzig",
         "new_york",
     };
-
     inline for (render_list) |city| {
         inline for (zoom_level[0]..zoom_level[1]) |zoom| {
             var arena = std.heap.ArenaAllocator.init(gpa);
@@ -621,6 +619,26 @@ test "test render all zoom" {
             try z2d.png_exporter.writeToPNGFile(rend.surface0, output_subpath, .{});
         }
     }
+}
+test "test render all zoom" {
+    if (false) return;
+    const gpa = std.testing.allocator;
+
+    const h1 = try std.Thread.spawn(.{ .allocator = gpa }, leipzig_new_york_rendering, .{.{ 0, 2 }});
+    const h2 = try std.Thread.spawn(.{ .allocator = gpa }, leipzig_new_york_rendering, .{.{ 2, 4 }});
+    const h3 = try std.Thread.spawn(.{ .allocator = gpa }, leipzig_new_york_rendering, .{.{ 4, 6 }});
+    const h4 = try std.Thread.spawn(.{ .allocator = gpa }, leipzig_new_york_rendering, .{.{ 6, 8 }});
+    const h5 = try std.Thread.spawn(.{ .allocator = gpa }, leipzig_new_york_rendering, .{.{ 8, 10 }});
+    const h6 = try std.Thread.spawn(.{ .allocator = gpa }, leipzig_new_york_rendering, .{.{ 10, 12 }});
+    const h7 = try std.Thread.spawn(.{ .allocator = gpa }, leipzig_new_york_rendering, .{.{ 12, 14 }});
+    try leipzig_new_york_rendering(.{ 14, 16 });
+    h1.join();
+    h2.join();
+    h3.join();
+    h4.join();
+    h5.join();
+    h6.join();
+    h7.join();
 }
 
 test "test render 1" {

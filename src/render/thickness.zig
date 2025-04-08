@@ -4,12 +4,13 @@ const assert = std.debug.assert;
 const expect = std.testing.expect;
 const root = @import("../root.zig");
 
+const correction_factor = 1.2;
 pub const StandardSizes = struct {
-    pub const S = 1.0;
-    pub const M = 1.5;
-    pub const L = 2.0;
-    pub const XL = 3.0;
-    pub const XXL = 4.5;
+    pub const S = 1.0 * correction_factor;
+    pub const M = 1.5 * correction_factor;
+    pub const L = 2.0 * correction_factor;
+    pub const XL = 3.0 * correction_factor;
+    pub const XXL = 4.5 * correction_factor;
 };
 
 fn comptime_parse_float(comptime number: []const u8) f64 {

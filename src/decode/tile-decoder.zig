@@ -39,7 +39,7 @@ test "tile 1" {
     try traverse_tile(XX, &xx, &tile, XX.order{});
 }
 
-pub fn print_any(t: anytype, alloc: Allocator) ![]const u8 {
+pub fn print_any_leaky(t: anytype, alloc: Allocator) ![]const u8 {
     var slist = std.ArrayList(u8).init(alloc);
     const aprint = std.fmt.allocPrint;
     const T = @TypeOf(t);
@@ -47,7 +47,7 @@ pub fn print_any(t: anytype, alloc: Allocator) ![]const u8 {
         .@"struct" => |s| {
             try slist.appendSlice(try aprint(alloc, "struct {}\n", .{T}));
             inline for (s.fields) |field| {
-                const field_rek = try print_any(@field(t, field.name), alloc);
+                const field_rek = try print_any_leaky(@field(t, field.name), alloc);
                 try slist.appendSlice(try aprint(alloc, "{s} :{} = {s}\n", .{
                     field.name,
                     field.type,
@@ -57,7 +57,7 @@ pub fn print_any(t: anytype, alloc: Allocator) ![]const u8 {
         },
         .pointer => |p| {
             if (comptime p.size == .one) {
-                try slist.appendSlice(try print_any(t.*, alloc));
+                try slist.appendSlice(try print_any_leaky(t.*, alloc));
             } else if (comptime p.is_const and p.child == u8) {
                 try slist.appendSlice(try aprint(alloc, "{s}", .{t}));
             } else {
