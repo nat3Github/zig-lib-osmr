@@ -202,7 +202,7 @@ pub fn set_background(self: *This, pixel: color) void {
     }
 }
 
-inline fn draw(self: *This, layer: *const Layer, feat: *const Feature, col: color, line_width: f64) void {
+inline fn draw(self: *This, layer: *const Layer, feat: *const Feature, col: color, line_width: f64, dotted: bool) void {
     assert(self.context0 != null);
     if (self.context0) |*context| {
         swallow_error(context.moveTo(0, 0));
@@ -211,6 +211,10 @@ inline fn draw(self: *This, layer: *const Layer, feat: *const Feature, col: colo
         const geomtype = feat.type orelse .UNKNOWN;
         const geo = feat.geometry.items;
         var ren = WRender{ .ctx = context, .extent = extent };
+        if (dotted) {
+            context.setDashes(&.{ 10, 7 });
+        } else context.setDashes(&.{});
+
         switch (geomtype) {
             .POINT => std.log.warn("point drawing not implemented", .{}),
             .LINESTRING => {
@@ -254,21 +258,43 @@ pub fn render_aeroway(self: *This, layer: *const Layer, feat: *const Feature, d:
         pub const amber300 = &.{ "heliport", "helipad" };
     };
     const col = color.ColorMap(Keys, Tailwind).map(d.class) orelse color.from_hex(Tailwind.neutral400);
-    self.draw(layer, feat, col, 1.0);
+    self.draw(layer, feat, col, 1.0, false);
 }
 pub fn render_aerodrome_label(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Aerodrome_label) void {
     _ = .{ feat, self, d, layer };
 }
 pub fn render_boundary(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Boundary) void {
-    const col = color.from_hex(Tailwind.zinc400);
-    const line_width = Line.StandardSizes.XL;
-    _ = d;
-    self.draw(layer, feat, col, line_width);
+    var col = color.from_hex(Tailwind.zinc300);
+    var line_width: f64 = Line.StandardSizes.M;
+    var dashed = false;
+    if (d.admin_level) |admin_level| {
+        if (d.maritime) |m| {
+            if (m == 1) {
+                dashed = true;
+                if (admin_level <= 2) {
+                    col = color.from_hex(Tailwind.indigo300);
+                    line_width = Line.StandardSizes.XL;
+                } else if (admin_level <= 4) {
+                    col = color.from_hex(Tailwind.blue300);
+                    line_width = Line.StandardSizes.L;
+                }
+            } else {
+                if (admin_level <= 2) {
+                    col = color.from_hex(Tailwind.stone400);
+                    line_width = Line.StandardSizes.L;
+                } else if (admin_level <= 4) {
+                    col = color.from_hex(Tailwind.orange200);
+                    line_width = Line.StandardSizes.L;
+                }
+            }
+        }
+    }
+    self.draw(layer, feat, col, line_width, dashed);
 }
 pub fn render_building(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Building) void {
-    const default_col = color.from_hex(Tailwind.slate200);
+    const default_col = color.from_hex(Tailwind.slate300);
     const col = color.convert_hex(d.colour) catch default_col;
-    self.draw(layer, feat, col, 2.0);
+    self.draw(layer, feat, col, 2.0, false);
 }
 pub fn render_housenumber(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Housenumber) void {
     _ = .{ feat, self, d, layer };
@@ -277,14 +303,14 @@ pub fn render_landcover(self: *This, layer: *const Layer, feat: *const Feature, 
     const Keys = struct {
         pub const cyan100 = &.{"ice"};
         pub const zinc500 = &.{"rock"};
-        pub const green400 = &.{"wood"};
-        pub const lime300 = &.{"grass"};
+        pub const green300 = &.{"wood"};
+        pub const lime200 = &.{"grass"};
         pub const yellow200 = &.{"sand"};
         pub const green200 = &.{"farmland"};
-        pub const amber300 = &.{"wetland"};
+        pub const orange200 = &.{"wetland"};
     };
     const col = color.ColorMap(Keys, Tailwind).map(d.class) orelse color.from_hex(Tailwind.green300);
-    self.draw(layer, feat, col, 1.0);
+    self.draw(layer, feat, col, 1.0, false);
 }
 
 pub fn render_landuse(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Landuse) void {
@@ -299,7 +325,7 @@ pub fn render_landuse(self: *This, layer: *const Layer, feat: *const Feature, d:
                     "cemetery",
                     "quarry",
                 };
-                pub const emerald600 = &.{
+                pub const emerald500 = &.{
                     "military",
                     "dam",
                 };
@@ -346,7 +372,7 @@ pub fn render_landuse(self: *This, layer: *const Layer, feat: *const Feature, d:
             const col = color.ColorMap(Keys, Tailwind).map(d.class) orelse return self.log_any(d.*);
             //color.from_hex(Tailwind.blue500);
 
-            self.draw(layer, feat, col, 2.0);
+            self.draw(layer, feat, col, 2.0, false);
         },
         else => return,
     }
@@ -365,7 +391,7 @@ pub fn render_park(self: *This, layer: *const Layer, feat: *const Feature, d: *c
     const t = feat.type orelse return;
     switch (t) {
         .POLYGON, .LINESTRING => {
-            self.draw(layer, feat, .from_hex(Tailwind.green300), 3.0);
+            self.draw(layer, feat, .from_hex(Tailwind.green300), 3.0, false);
             // self.log_any(d.*);
             _ = d;
         },
@@ -419,8 +445,6 @@ fn render_transport(self: *This, layer: *const Layer, feat: *const Feature, key:
         pub const stone400 = &.{
             "track",
             "track_construction",
-        };
-        pub const emerald600 = &.{
             "path",
             "path_construction",
         };
@@ -435,7 +459,7 @@ fn render_transport(self: *This, layer: *const Layer, feat: *const Feature, key:
         pub const rose400 = &.{
             "rail",
         };
-        pub const indigo300 = &.{
+        pub const sky300 = &.{
             "ferry",
         };
         pub const orange300 = &.{
@@ -455,14 +479,12 @@ fn render_transport(self: *This, layer: *const Layer, feat: *const Feature, key:
             "primary",
             "primary_construction",
 
-            "rail",
             "secondary",
             "secondary_construction",
-            "tertiary",
-            "tertiary_construction",
-            "ferry",
         };
         pub const l = &.{
+            "tertiary",
+            "tertiary_construction",
             "minor",
             "service",
             "minor_construction",
@@ -472,6 +494,8 @@ fn render_transport(self: *This, layer: *const Layer, feat: *const Feature, key:
             "bus_guideway",
             "bridge",
             "pier",
+            "rail",
+            "ferry",
         };
         pub const m = &.{
             "path",
@@ -485,7 +509,7 @@ fn render_transport(self: *This, layer: *const Layer, feat: *const Feature, key:
     const linewidth = Line.line_width(Thickness, key) orelse return self.log_any(key);
     const M = color.ColorMap(Keys, Tailwind);
     const col = M.map(key) orelse return self.log_any(key);
-    self.draw(layer, feat, col, linewidth);
+    self.draw(layer, feat, col, linewidth, false);
 }
 
 pub fn render_transportation(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Transportation) void {
@@ -497,13 +521,13 @@ pub fn render_transportation_name(self: *This, layer: *const Layer, feat: *const
 inline fn water_layer(self: *This, layer: *const Layer, feat: *const Feature, d: []const u8) void {
     const Keys = struct {
         pub const sky300 = &.{"river"};
-        pub const teal400 = &.{"pond"};
-        pub const cyan500 = &.{ "dock", "swimming_pool" };
-        pub const blue500 = &.{"lake"};
-        pub const teal600 = &.{"ocean"};
+        pub const teal300 = &.{"pond"};
+        pub const cyan400 = &.{ "dock", "swimming_pool" };
+        pub const blue400 = &.{"lake"};
+        pub const teal400 = &.{"ocean"};
     };
     const col = color.ColorMap(Keys, Tailwind).map(d) orelse color.from_hex(Tailwind.blue500);
-    self.draw(layer, feat, col, 2.0);
+    self.draw(layer, feat, col, 2.0, false);
 }
 pub fn render_water(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Water) void {
     self.water_layer(layer, feat, d.class);
@@ -525,7 +549,7 @@ pub fn render_waterway(self: *This, layer: *const Layer, feat: *const Feature, d
         pub const teal800 = &.{ "drain", "ditch" };
     };
     const col = color.ColorMap(Keys, Tailwind).map(d.class) orelse color.from_hex(Tailwind.blue500);
-    self.draw(layer, feat, col, 2.0);
+    self.draw(layer, feat, col, 2.0, true);
 }
 
 fn set_context(self: *This) void {
@@ -541,13 +565,14 @@ pub fn render(self: *This, tile: *const dec.Tile) !void {
     self.set_context();
     const RenderAll = struct {
         landuse: *const fn (*This, *const Layer, *const Feature, *const dec.Landuse) void = render_landuse,
-        water: *const fn (*This, *const Layer, *const Feature, *const dec.Water) void = render_water,
-        water_name: *const fn (*This, *const Layer, *const Feature, *const dec.Water_name) void = render_water_name,
-        waterway: *const fn (*This, *const Layer, *const Feature, *const dec.Waterway) void = render_waterway,
 
         park: *const fn (*This, *const Layer, *const Feature, *const dec.Park) void = render_park,
         place: *const fn (*This, *const Layer, *const Feature, *const dec.Place) void = render_place,
         landcover: *const fn (*This, *const Layer, *const Feature, *const dec.Landcover) void = render_landcover,
+
+        water: *const fn (*This, *const Layer, *const Feature, *const dec.Water) void = render_water,
+        water_name: *const fn (*This, *const Layer, *const Feature, *const dec.Water_name) void = render_water_name,
+        waterway: *const fn (*This, *const Layer, *const Feature, *const dec.Waterway) void = render_waterway,
 
         aeroway: *const fn (*This, *const Layer, *const Feature, *const dec.Aeroway) void = render_aeroway,
         aerodrome_label: *const fn (*This, *const Layer, *const Feature, *const dec.Aerodrome_label) void = render_aerodrome_label,
@@ -591,7 +616,7 @@ test "test render all zoom" {
             var file = try std.fs.cwd().openFile(tile_subpath, .{});
             const input = try file.reader().readAllAlloc(alloc, 10 * 1024 * 1024);
             const tile: dec.Tile = try dec.decode(input, alloc);
-            rend.set_background(.from_hex(Tailwind.white));
+            rend.set_background(.from_hex(Tailwind.lime100));
             try rend.render(&tile);
             try z2d.png_exporter.writeToPNGFile(rend.surface0, output_subpath, .{});
         }
