@@ -267,7 +267,7 @@ pub fn render_aerodrome_label(self: *This, layer: *const Layer, feat: *const Fea
 }
 pub fn render_boundary(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Boundary) void {
     var col = color.from_hex(Tailwind.zinc300);
-    var line_width: f64 = Line.StandardSizes.M;
+    const line_width: f64 = Line.StandardSizes.M;
     var dashed = false;
     if (d.admin_level) |admin_level| {
         if (d.maritime) |m| {
@@ -275,18 +275,14 @@ pub fn render_boundary(self: *This, layer: *const Layer, feat: *const Feature, d
                 dashed = true;
                 if (admin_level <= 2) {
                     col = color.from_hex(Tailwind.indigo300);
-                    line_width = Line.StandardSizes.XL;
                 } else if (admin_level <= 4) {
                     col = color.from_hex(Tailwind.blue300);
-                    line_width = Line.StandardSizes.L;
                 }
             } else {
                 if (admin_level <= 2) {
                     col = color.from_hex(Tailwind.stone400);
-                    line_width = Line.StandardSizes.L;
                 } else if (admin_level <= 4) {
                     col = color.from_hex(Tailwind.orange200);
-                    line_width = Line.StandardSizes.L;
                 }
             }
         }
@@ -468,13 +464,14 @@ fn render_transport(self: *This, layer: *const Layer, feat: *const Feature, key:
             "busway",
             "bus_guideway",
         };
-        pub const rose600 = &.{
+        pub const rose300 = &.{
             "transit",
         };
     };
     const Thickness = struct {
         // pub const xl = &.{};
-        pub const l = &.{
+        // pub const l = &.{};
+        pub const m = &.{
             "motorway",
             "trunk",
             "motorway_construction",
@@ -486,21 +483,21 @@ fn render_transport(self: *This, layer: *const Layer, feat: *const Feature, key:
             "secondary",
             "secondary_construction",
 
+            "bridge",
+            "pier",
+            "rail",
+            "ferry",
+            "transit",
+            "busway",
+            "bus_guideway",
             "tertiary",
             "tertiary_construction",
             "minor",
             "service",
             "minor_construction",
             "service_construction",
-            "transit",
-            "busway",
-            "bus_guideway",
-            "bridge",
-            "pier",
-            "rail",
-            "ferry",
         };
-        pub const m = &.{
+        pub const s = &.{
             "path",
             "path_construction",
             "track",
@@ -510,6 +507,8 @@ fn render_transport(self: *This, layer: *const Layer, feat: *const Feature, key:
         };
     };
     const linewidth = Line.line_width(Thickness, key) orelse return self.log_any(key);
+    // _ = Thickness;
+    // const linewidth = Line.StandardSizes.M;
     const M = color.ColorMap(Keys, Tailwind);
     const col = M.map(key) orelse return self.log_any(key);
     self.draw(layer, feat, col, linewidth, false);
