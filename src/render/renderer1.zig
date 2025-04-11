@@ -14,7 +14,7 @@ const Cmd = dec.Cmd;
 const color = root.color;
 
 // tailwind colors
-pub const Tailwind = @import("tailwind");
+const Tailwind = @import("tailwind");
 const Line = root.thickness;
 
 const WRender = struct {
