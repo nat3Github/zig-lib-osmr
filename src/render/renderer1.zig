@@ -11,7 +11,7 @@ const Feature = dec.Feature;
 const This = @This();
 const Traverser = dec.LayerTraverser(This);
 const Cmd = dec.Cmd;
-const color = root.color;
+const Color = root.Color;
 
 // tailwind colors
 const Tailwind = @import("tailwind");
@@ -188,7 +188,7 @@ pub fn deinit(self: *This) void {
         self.arena.deinit();
     }
 }
-pub fn set_background(self: *This, pixel: color) void {
+pub fn set_background(self: *This, pixel: Color) void {
     const width_height: usize = @intCast(self.surface0.getWidth());
     const r, const g, const b = pixel.rgb();
     for (0..width_height) |x| {
@@ -202,7 +202,7 @@ pub fn set_background(self: *This, pixel: color) void {
     }
 }
 
-inline fn draw(self: *This, layer: *const Layer, feat: *const Feature, col: color, line_width: f64, dotted: bool) void {
+inline fn draw(self: *This, layer: *const Layer, feat: *const Feature, col: Color, line_width: f64, dotted: bool) void {
     assert(self.context0 != null);
     if (self.context0) |*context| {
         swallow_error(context.moveTo(0, 0));
@@ -259,14 +259,14 @@ pub fn render_aeroway(self: *This, layer: *const Layer, feat: *const Feature, d:
         pub const orange400 = &.{"gate"};
         pub const amber300 = &.{ "heliport", "helipad" };
     };
-    const col = color.ColorMap(Keys, Tailwind).map(d.class) orelse color.from_hex(Tailwind.neutral400);
+    const col = Color.ColorMap(Keys, Tailwind).map(d.class) orelse Color.from_hex(Tailwind.neutral400);
     self.draw(layer, feat, col, 1.0, false);
 }
 pub fn render_aerodrome_label(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Aerodrome_label) void {
     _ = .{ feat, self, d, layer };
 }
 pub fn render_boundary(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Boundary) void {
-    var col = color.from_hex(Tailwind.zinc300);
+    var col = Color.from_hex(Tailwind.zinc300);
     const line_width: f64 = Line.StandardSizes.M;
     var dashed = false;
     if (d.admin_level) |admin_level| {
@@ -274,15 +274,15 @@ pub fn render_boundary(self: *This, layer: *const Layer, feat: *const Feature, d
             if (m == 1) {
                 dashed = true;
                 if (admin_level <= 2) {
-                    col = color.from_hex(Tailwind.indigo300);
+                    col = Color.from_hex(Tailwind.indigo300);
                 } else if (admin_level <= 4) {
-                    col = color.from_hex(Tailwind.blue300);
+                    col = Color.from_hex(Tailwind.blue300);
                 }
             } else {
                 if (admin_level <= 2) {
-                    col = color.from_hex(Tailwind.stone400);
+                    col = Color.from_hex(Tailwind.stone400);
                 } else if (admin_level <= 4) {
-                    col = color.from_hex(Tailwind.orange200);
+                    col = Color.from_hex(Tailwind.orange200);
                 }
             }
         }
@@ -290,8 +290,8 @@ pub fn render_boundary(self: *This, layer: *const Layer, feat: *const Feature, d
     self.draw(layer, feat, col, line_width, dashed);
 }
 pub fn render_building(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Building) void {
-    const default_col = color.from_hex(Tailwind.stone300);
-    const col = color.convert_hex(d.colour) catch default_col;
+    const default_col = Color.from_hex(Tailwind.stone300);
+    const col = Color.convert_hex(d.colour) catch default_col;
     self.draw(layer, feat, col, 2.0, false);
 }
 pub fn render_housenumber(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Housenumber) void {
@@ -307,7 +307,7 @@ pub fn render_landcover(self: *This, layer: *const Layer, feat: *const Feature, 
         pub const green200 = &.{"farmland"};
         pub const orange200 = &.{"wetland"};
     };
-    const col = color.ColorMap(Keys, Tailwind).map(d.class) orelse color.from_hex(Tailwind.green300);
+    const col = Color.ColorMap(Keys, Tailwind).map(d.class) orelse Color.from_hex(Tailwind.green300);
     self.draw(layer, feat, col, 1.0, false);
 }
 
@@ -367,7 +367,7 @@ pub fn render_landuse(self: *This, layer: *const Layer, feat: *const Feature, d:
                 };
             };
 
-            const col = color.ColorMap(Keys, Tailwind).map(d.class) orelse return self.log_any(d.*);
+            const col = Color.ColorMap(Keys, Tailwind).map(d.class) orelse return self.log_any(d.*);
             //color.from_hex(Tailwind.blue500);
 
             self.draw(layer, feat, col, 2.0, false);
@@ -509,7 +509,7 @@ fn render_transport(self: *This, layer: *const Layer, feat: *const Feature, key:
     const linewidth = Line.line_width(Thickness, key) orelse return self.log_any(key);
     // _ = Thickness;
     // const linewidth = Line.StandardSizes.M;
-    const M = color.ColorMap(Keys, Tailwind);
+    const M = Color.ColorMap(Keys, Tailwind);
     const col = M.map(key) orelse return self.log_any(key);
     self.draw(layer, feat, col, linewidth, false);
 }
@@ -528,7 +528,7 @@ inline fn water_layer(self: *This, layer: *const Layer, feat: *const Feature, d:
         pub const blue300 = &.{"lake"};
         pub const teal400 = &.{"ocean"};
     };
-    const col = color.ColorMap(Keys, Tailwind).map(d) orelse color.from_hex(Tailwind.blue500);
+    const col = Color.ColorMap(Keys, Tailwind).map(d) orelse Color.from_hex(Tailwind.blue500);
     self.draw(layer, feat, col, 2.0, false);
 }
 pub fn render_water(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Water) void {
@@ -550,7 +550,7 @@ pub fn render_waterway(self: *This, layer: *const Layer, feat: *const Feature, d
         pub const cyan700 = &.{"canal"};
         pub const teal800 = &.{ "drain", "ditch" };
     };
-    const col = color.ColorMap(Keys, Tailwind).map(d.class) orelse color.from_hex(Tailwind.blue500);
+    const col = Color.ColorMap(Keys, Tailwind).map(d.class) orelse Color.from_hex(Tailwind.blue500);
     self.draw(layer, feat, col, 2.0, true);
 }
 

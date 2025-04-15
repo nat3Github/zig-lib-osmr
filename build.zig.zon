@@ -20,8 +20,7 @@
             .hash = "tailwind-0.0.0-j7vJMfstAABem1tfro5C6lYqdrB_2ucHwjxoS-kYeTEa",
         },
         .dotenv = .{
-            .url = "https://github.com/nat3Github/zig-lib-dotenv/archive/refs/heads/main.tar.gz",
-            .hash = "dotenv-0.1.1-MkB8yLoYAACyIR_dxGLegB6-_QsueXKBHYQ3OQd6yNBT",
+            .path = "../dotenv",
         },
     },
     .paths = .{

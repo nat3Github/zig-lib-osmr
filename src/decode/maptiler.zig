@@ -3,6 +3,7 @@ const math = std.math;
 const assert = std.debug.assert;
 const expect = std.testing.expect;
 const Allocator = std.mem.Allocator;
+pub const Env = @import("dotenv");
 
 pub fn latLonToTile(lat_deg: f64, lon_deg: f64, zoom: u32) struct { x: u32, y: u32 } {
     const lat_rad = lat_deg * math.pi / 180.0;
@@ -64,7 +65,6 @@ fn debug_write_tile(
 // NOTE: zoom level on maptiler is ok from 0 to 15
 test "download tile 2" {
     if (true) return;
-    const Env = @import("dotenv");
     const alloc = std.testing.allocator;
     var env_file = try std.fs.cwd().openFile("src/decode/.env", .{});
     defer env_file.close();
