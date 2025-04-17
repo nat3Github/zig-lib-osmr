@@ -16,157 +16,13 @@ const Color = root.Color;
 // tailwind colors
 const Tailwind = @import("tailwind");
 const Line = root.thickness;
+const WRender = @import("wrender.zig").WRender2;
 
-const WRender = struct {
-    const Type = enum { Polygon, LineString };
-    x: i32 = 0,
-    y: i32 = 0,
-    debug: bool = false,
-    extent: u32,
-    ctx: *z2d.Context,
-    rtype: Type = .Polygon,
-    pub fn render_geometry(self: *WRender, cmd_buffer: []u32) void {
-        self.x = 0;
-        self.y = 0;
-        Cmd.decode(cmd_buffer, self, close_path, move_to, line_to) catch |e| {
-            std.log.err("cmd decode error: {}", .{e});
-            return;
-        };
-        switch (self.rtype) {
-            .Polygon => {},
-            .LineString => {
-                swallow_error(self.ctx.stroke());
-            },
-        }
-    }
-    fn close_path(self: *WRender) void {
-        if (self.debug) std.log.warn("close path", .{});
-        swallow_error(self.ctx.closePath());
-        switch (self.rtype) {
-            .Polygon => {
-                swallow_error(self.ctx.fill());
-                self.ctx.resetPath();
-            },
-            .LineString => {
-                swallow_error(self.ctx.stroke());
-                self.ctx.resetPath();
-            },
-        }
-    }
-    fn move_to(self: *WRender, x: i32, y: i32) void {
-        self.add_xy(x, y);
-        const mx, const my = self.get_xy_f64();
-        swallow_error(self.ctx.moveTo(mx, my));
-        if (self.debug) std.log.warn("moved to x: {d:.0}, y: {d:.0}", .{ mx, my });
-    }
-    fn line_to(self: *WRender, x: i32, y: i32) void {
-        self.add_xy(x, y);
-        const mx, const my = self.get_xy_f64();
-        swallow_error(self.ctx.lineTo(mx, my));
-        if (self.debug) std.log.warn("line to x: {d:.0}, y: {d:.0}", .{ mx, my });
-    }
-
-    inline fn clamped_xy(self: *WRender, x: i32, y: i32) struct { i32, i32 } {
-        const img_width = self.ctx.surface.getWidth();
-        if (img_width < 1) std.debug.panic("img width was smaller than 1", .{});
-        const clampedx = std.math.clamp(x, 0, img_width - 1);
-        const clampedy = std.math.clamp(y, 0, img_width - 1);
-        return .{ clampedx, clampedy };
-    }
-    inline fn convert_and_clamp(self: *WRender, x: i32, y: i32) struct { i32, i32 } {
-        const img_width = self.ctx.surface.getWidth();
-        const extent_signed: i32 = @intCast(self.extent);
-        const xa = tile2img(x, extent_signed, img_width);
-        const ya = tile2img(y, extent_signed, img_width);
-        return self.clamped_xy(xa, ya);
-    }
-    inline fn get_xy_f64(self: *WRender) struct { f64, f64 } {
-        const x, const y = self.convert_and_clamp(self.x, self.y);
-        return .{ @floatFromInt(x), @floatFromInt(y) };
-    }
-    inline fn add_xy(self: *WRender, x: i32, y: i32) void {
-        self.x += x;
-        self.y += y;
-    }
-    inline fn tile2img(tile_coord: i32, extent: i32, image_size: i32) i32 {
-        if (extent == 0) return 0;
-        return @divTrunc((tile_coord * image_size), extent);
-    }
-};
-
-inline fn swallow_error(res: anyerror!void) void {
-    _ = res catch |e| std.log.err("error: {}", .{e});
-}
 alloc: Allocator,
 arena: std.heap.ArenaAllocator,
 surface0: z2d.Surface,
 context0: ?z2d.Context = null,
 counter: usize = 0,
-
-const RenderConfig = struct {
-    toggle_building: bool = false,
-    toggle_landcover: bool = false,
-    toggle_transportation: bool = false,
-    toggle_transportation_name: bool = false,
-    toggle_water: bool = false,
-    toggle_waterway: bool = false,
-    toggle_aeroway: bool = false,
-    toggle_boundary: bool = false,
-
-    // NOTE: not implemented for now
-    toggle_aerodrome_label: bool = false,
-    toggle_housenumber: bool = false,
-    toggle_landuse: bool = false,
-    toggle_mountain_peak: bool = false,
-    toggle_park: bool = false,
-    toggle_place: bool = false,
-    toggle_poi: bool = false,
-    toggle_water_name: bool = false,
-
-    pub const Implemented = RenderConfig{
-        .toggle_transportation = true,
-        // .toggle_transportation_name = true,
-        // .toggle_building = true,
-        // .toggle_landcover = true,
-        // .toggle_water = true,
-        // .toggle_waterway = true,
-        // in implementation
-        .toggle_boundary = true,
-        .toggle_aeroway = true,
-    };
-    pub const All = RenderConfig{
-        .toggle_landcover = true,
-        .toggle_water = true,
-        .toggle_waterway = true,
-
-        .toggle_transportation = true,
-        .toggle_transportation_name = true,
-        .toggle_building = true,
-        .toggle_aeroway = true,
-        .toggle_boundary = true,
-
-        .toggle_aerodrome_label = true,
-        .toggle_housenumber = true,
-        .toggle_landuse = true,
-        .toggle_mountain_peak = true,
-        .toggle_park = true,
-        .toggle_place = true,
-        .toggle_poi = true,
-        .toggle_water_name = true,
-    };
-    pub const LandAndWater = RenderConfig{
-        .toggle_landcover = true,
-        .toggle_water = true,
-        .toggle_waterway = true,
-    };
-    pub const StreetsAndBuildings = RenderConfig{
-        .toggle_transportation = true,
-        .toggle_transportation_name = true,
-        .toggle_building = true,
-        .toggle_aeroway = true,
-        .toggle_boundary = true,
-    };
-};
 
 pub fn init(alloc: Allocator, width_height: u32) !This {
     return This{
@@ -201,6 +57,9 @@ pub fn set_background(self: *This, pixel: Color) void {
         }
     }
 }
+inline fn swallow_error(res: anyerror!void) void {
+    _ = res catch |e| std.log.err("error: {}", .{e});
+}
 
 inline fn draw(self: *This, layer: *const Layer, feat: *const Feature, col: Color, line_width: f64, dotted: bool) void {
     assert(self.context0 != null);
@@ -210,7 +69,7 @@ inline fn draw(self: *This, layer: *const Layer, feat: *const Feature, col: Colo
         const extent = get_extent(layer);
         const geomtype = feat.type orelse .UNKNOWN;
         const geo = feat.geometry.items;
-        var ren = WRender{ .ctx = context, .extent = extent };
+        var ren = WRender{ .ctx = context, .extent = @floatFromInt(extent) };
         if (dotted) {
             context.setDashes(&.{ 10, 7 });
         } else context.setDashes(&.{});
@@ -619,7 +478,7 @@ fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, compti
         }
     }
 }
-test "test render all zoom" {
+fn test_render_all_zoom() !void {
     if (false) return;
     const gpa = std.testing.allocator;
 
@@ -640,8 +499,8 @@ test "test render all zoom" {
     h7.join();
 }
 
-test "test render 1" {
-    if (true) return;
+fn test_render_1() !void {
+    if (false) return;
     const balloc = std.testing.allocator;
     var arena = std.heap.ArenaAllocator.init(balloc);
     defer arena.deinit();
@@ -662,11 +521,10 @@ test "test render 1" {
         }
     }
     try rend.render(&tile);
-
     try z2d.png_exporter.writeToPNGFile(rend.surface0, "./testdata/surface0.png", .{});
 }
 
-test "render test" {
+fn test_render_0() !void {
     const balloc = std.testing.allocator;
     var arena = std.heap.ArenaAllocator.init(balloc);
     defer arena.deinit();
@@ -698,4 +556,33 @@ test "render test" {
     try context.closePath();
     try context.fill();
     try z2d.png_exporter.writeToPNGFile(sfc, "./testdata/surface1.png", .{});
+}
+
+fn test_error_repro_z2d() !void {
+    const balloc = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(balloc);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+    const width_height = 300;
+
+    var surface0 = try z2d.Surface.init(
+        .image_surface_rgb,
+        alloc,
+        @intCast(width_height),
+        @intCast(width_height),
+    );
+    var context0 = z2d.Context.init(alloc, &surface0);
+    context0.setSourceToPixel(.{ .rgb = .{ .r = 255, .b = 0, .g = 0 } });
+    try context0.lineTo(-12000, -10);
+    try context0.lineTo(10, 100);
+    try context0.lineTo(-910, 12000);
+    try context0.lineTo(10, 100);
+    try context0.stroke();
+
+    try z2d.png_exporter.writeToPNGFile(surface0, "./testdata/surfaceX.png", .{});
+}
+
+test "test kkk" {
+    // try test_render_all_zoom();
+    try test_render_1();
 }
