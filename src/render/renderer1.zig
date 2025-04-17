@@ -622,6 +622,7 @@ fn test_error_repro_z2d() !void {
 test "test kkk" {
     // try test_render_all_zoom();
     // try test_render_1();
+    // try test_error_repro_z2d();
     try test_failing();
 }
 

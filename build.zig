@@ -53,6 +53,18 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
         .root_module = osmr_module,
     });
+    const lldb = b.addSystemCommand(&.{
+        "lldb",
+        // add lldb flags before --
+        "--",
+    });
+    // appends the unit_tests executable path to the lldb command line
+    lldb.addArtifactArg(lib_test);
+    // lldb.addArg can add arguments after the executable path
+
+    const lldb_step = b.step("debug", "run the tests under lldb");
+    lldb_step.dependOn(&lldb.step);
+
     const lib_test_run = b.addRunArtifact(lib_test);
     step_test.dependOn(&lib_test_run.step);
 }

@@ -90,14 +90,14 @@ pub const WRender = struct {
 };
 pub const WRender2 = struct {
     const Type = enum { Polygon, LineString };
-    x: f32 = 0,
-    y: f32 = 0,
+    x: f64 = 0,
+    y: f64 = 0,
     last_linev: Vec2 = .{ .x = -1, .y = -1 },
     debug: bool = false,
-    extent: f32,
+    extent: f64,
     ctx: *z2d.Context,
     rtype: Type = .Polygon,
-    padding_pixels: f32,
+    padding_pixels: f64,
     pub fn render_geometry(self: *@This(), cmd_buffer: []u32) void {
         self.x = 0;
         self.y = 0;
@@ -183,18 +183,20 @@ pub const WRender2 = struct {
         self.y += @floatFromInt(y);
     }
     inline fn transformV(self: *@This(), v: Vec2) Vec2 {
-        const xdim: f32 = @floatFromInt(self.ctx.surface.getWidth());
-        const ydim: f32 = @floatFromInt(self.ctx.surface.getHeight());
+        const xdim: f64 = @floatFromInt(self.ctx.surface.getWidth());
+        const ydim: f64 = @floatFromInt(self.ctx.surface.getHeight());
         return Vec2{
-            .x = std.math.clamp(self.transformf32(v.x) + self.padding_pixels, 1, xdim + self.padding_pixels - 1 - 1),
-            .y = std.math.clamp(self.transformf32(v.y) + self.padding_pixels, 1, ydim + self.padding_pixels - 1 - 1),
+            .x = std.math.clamp(self.transformf64(v.x) + self.padding_pixels, 1, xdim + self.padding_pixels - 1 - 1),
+            .y = std.math.clamp(self.transformf64(v.y) + self.padding_pixels, 1, ydim + self.padding_pixels - 1 - 1),
         };
     }
-    inline fn transformf32(self: *@This(), tile_coord: f32) f32 {
-        const width: f32 = @floatFromInt(self.ctx.surface.getWidth());
+    inline fn transformf64(self: *@This(), tile_coord: f64) f64 {
+        const width: f64 = @floatFromInt(self.ctx.surface.getWidth());
         const width_sub_padding = width - 2 * self.padding_pixels;
         if (self.extent <= 1) return 0;
-        return (tile_coord * (width_sub_padding)) / self.extent;
+        const res = (tile_coord * (width_sub_padding)) / self.extent;
+        assert(!std.math.isInf(res) and !std.math.isNan(res));
+        return res;
     }
 
     inline fn transform(self: *@This(), tile_coord: i32) i32 {
@@ -210,11 +212,11 @@ inline fn swallow_error(res: anyerror!void) void {
 }
 
 const Vec2 = struct {
-    x: f32,
-    y: f32,
+    x: f64,
+    y: f64,
 };
 
-inline fn clip_test(p: f32, q: f32, t0: *f32, t1: *f32) bool {
+inline fn clip_test(p: f64, q: f64, t0: *f64, t1: *f64) bool {
     if (p == 0.0) {
         return q >= 0.0;
     }
@@ -229,18 +231,18 @@ inline fn clip_test(p: f32, q: f32, t0: *f32, t1: *f32) bool {
     return true;
 }
 pub fn liangBarskyClip(
-    xMin: f32,
-    yMin: f32,
-    xMax: f32,
-    yMax: f32,
+    xMin: f64,
+    yMin: f64,
+    xMax: f64,
+    yMax: f64,
     p0: Vec2,
     p1: Vec2,
 ) ?struct { start: Vec2, end: Vec2 } {
     const dx = p1.x - p0.x;
     const dy = p1.y - p0.y;
 
-    var t0: f32 = 0.0;
-    var t1: f32 = 1.0;
+    var t0: f64 = 0.0;
+    var t1: f64 = 1.0;
 
     if (!clip_test(-dx, p0.x - xMin, &t0, &t1)) return null;
     if (!clip_test(dx, xMax - p0.x, &t0, &t1)) return null;
