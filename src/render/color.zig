@@ -5,49 +5,54 @@ const expect = std.testing.expect;
 const root = @import("../root.zig");
 
 pub const RgbaCol = @This();
-rgba: [4]u8 = std.mem.zeroes([4]u8),
-pub const red = RgbaCol{ .rgba = .{ 255, 0, 0, 0 } };
-pub const green = RgbaCol{ .rgba = .{ 0, 255, 0, 0 } };
-pub const yellow = RgbaCol{ .rgba = .{ 255, 255, 0, 0 } };
+rgba_arr: [4]u8 = std.mem.zeroes([4]u8),
+pub const red = RgbaCol{ .rgba_arr = .{ 255, 0, 0, 255 } };
+pub const green = RgbaCol{ .rgba_arr = .{ 0, 255, 0, 255 } };
+pub const yellow = RgbaCol{ .rgba_arr = .{ 255, 255, 0, 255 } };
+pub const transparent = RgbaCol{ .rgba_arr = .{ 0, 0, 0, 0 } };
 /// accepts "FF00FF" or "#FF00FF" or "#ff00ff"
 pub fn from_hex(comptime hex: []const u8) RgbaCol {
-    const rgba = comptime hexToRgb(hex) catch {
+    const xrgba = comptime hexToRgb(hex) catch {
         @compileError("failed to convert rgba from hex code");
     };
-    return RgbaCol{ .rgba = rgba };
+    return RgbaCol{ .rgba_arr = xrgba };
 }
 pub fn convert_hex(hex: []const u8) !RgbaCol {
-    const rgba = try hexToRgb(hex);
-    return RgbaCol{ .rgba = rgba };
+    const xrgba = try hexToRgb(hex);
+    return RgbaCol{ .rgba_arr = xrgba };
 }
 /// for easy tuple destructuring
 pub fn rgb(self: *const RgbaCol) struct { u8, u8, u8 } {
-    const arr = self.rgba;
+    const arr = self.rgba_arr;
     return .{ arr[0], arr[1], arr[2] };
 }
+pub fn rgba(self: *const RgbaCol) struct { u8, u8, u8, u8 } {
+    const arr = self.rgba_arr;
+    return .{ arr[0], arr[1], arr[2], arr[3] };
+}
 pub fn eql(self: *const RgbaCol, other: RgbaCol) bool {
-    return std.mem.eql(u8, &self.rgba, &other.rgba);
+    return std.mem.eql(u8, &self.rgba_arr, &other.rgba_arr);
 }
 inline fn hexToRgb(hex: []const u8) ![4]u8 {
-    var rgba: [4]u8 = .{ 0, 0, 0, 255 };
+    var xrgba: [4]u8 = .{ 0, 0, 0, 255 };
     if (hex.len == 6) {
-        for (rgba[0..3], 0..) |_, i| {
+        for (xrgba[0..3], 0..) |_, i| {
             const start = i * 2;
             const slice = hex[start .. start + 2];
             const value = try std.fmt.parseInt(u8, slice, 16);
-            rgba[i] = value;
+            xrgba[i] = value;
         }
-        return rgba;
+        return xrgba;
     }
     if (hex.len == 7 and hex[0] == '#') {
         const hex1 = hex[1..];
-        for (rgba[0..3], 0..) |_, i| {
+        for (xrgba[0..3], 0..) |_, i| {
             const start = i * 2;
             const slice = hex1[start .. start + 2];
             const value = try std.fmt.parseInt(u8, slice, 16);
-            rgba[i] = value;
+            xrgba[i] = value;
         }
-        return rgba;
+        return xrgba;
     }
     return error.FailedToParseHexColor;
 }

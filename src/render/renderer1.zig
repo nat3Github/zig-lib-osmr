@@ -24,15 +24,18 @@ surface0: z2d.Surface,
 context0: ?z2d.Context = null,
 counter: usize = 0,
 
+const padding_pixels = 16;
+
 pub fn init(alloc: Allocator, width_height: u32) !This {
+    const w = width_height + padding_pixels * 2;
     return This{
         .alloc = alloc,
         .arena = std.heap.ArenaAllocator.init(alloc),
         .surface0 = try z2d.Surface.init(
-            .image_surface_rgb,
+            .image_surface_rgba,
             alloc,
-            @intCast(width_height),
-            @intCast(width_height),
+            @intCast(w),
+            @intCast(w),
         ),
     };
 }
@@ -46,17 +49,18 @@ pub fn deinit(self: *This) void {
 }
 pub fn set_background(self: *This, pixel: Color) void {
     const width_height: usize = @intCast(self.surface0.getWidth());
-    const r, const g, const b = pixel.rgb();
+    const r, const g, const b, const a = pixel.rgba();
     for (0..width_height) |x| {
         for (0..width_height) |y| {
             self.surface0.putPixel(
                 @intCast(x),
                 @intCast(y),
-                z2d.Pixel{ .rgb = .{ .r = r, .g = g, .b = b } },
+                z2d.Pixel{ .rgba = .{ .r = r, .g = g, .b = b, .a = a } },
             );
         }
     }
 }
+
 inline fn swallow_error(res: anyerror!void) void {
     _ = res catch |e| std.log.err("error: {}", .{e});
 }
@@ -69,7 +73,7 @@ inline fn draw(self: *This, layer: *const Layer, feat: *const Feature, col: Colo
         const extent = get_extent(layer);
         const geomtype = feat.type orelse .UNKNOWN;
         const geo = feat.geometry.items;
-        var ren = WRender{ .ctx = context, .extent = @floatFromInt(extent) };
+        var ren = WRender{ .ctx = context, .extent = @floatFromInt(extent), .padding_pixels = padding_pixels };
         if (dotted) {
             context.setDashes(&.{ 10, 7 });
         } else context.setDashes(&.{});
@@ -110,7 +114,7 @@ inline fn log_any(self: *This, t: anytype) void {
     std.log.warn("{s}", .{s});
 }
 
-pub fn render_aeroway(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Aeroway) void {
+pub fn draw_aeroway(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Aeroway) void {
     const Keys = struct {
         pub const sky100 = &.{"aerodrome"};
         pub const neutral300 = &.{ "runway", "taxiway" };
@@ -121,10 +125,10 @@ pub fn render_aeroway(self: *This, layer: *const Layer, feat: *const Feature, d:
     const col = Color.ColorMap(Keys, Tailwind).map(d.class) orelse Color.from_hex(Tailwind.neutral400);
     self.draw(layer, feat, col, 1.0, false);
 }
-pub fn render_aerodrome_label(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Aerodrome_label) void {
+pub fn draw_aerodrome_label(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Aerodrome_label) void {
     _ = .{ feat, self, d, layer };
 }
-pub fn render_boundary(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Boundary) void {
+pub fn draw_boundary(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Boundary) void {
     var col = Color.from_hex(Tailwind.zinc300);
     const line_width: f64 = Line.StandardSizes.M;
     var dashed = false;
@@ -148,15 +152,15 @@ pub fn render_boundary(self: *This, layer: *const Layer, feat: *const Feature, d
     }
     self.draw(layer, feat, col, line_width, dashed);
 }
-pub fn render_building(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Building) void {
+pub fn draw_building(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Building) void {
     const default_col = Color.from_hex(Tailwind.stone300);
     const col = Color.convert_hex(d.colour) catch default_col;
     self.draw(layer, feat, col, 2.0, false);
 }
-pub fn render_housenumber(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Housenumber) void {
+pub fn draw_housenumber(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Housenumber) void {
     _ = .{ feat, self, d, layer };
 }
-pub fn render_landcover(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Landcover) void {
+pub fn draw_landcover(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Landcover) void {
     const Keys = struct {
         pub const cyan100 = &.{"ice"};
         pub const zinc500 = &.{"rock"};
@@ -170,7 +174,7 @@ pub fn render_landcover(self: *This, layer: *const Layer, feat: *const Feature, 
     self.draw(layer, feat, col, 1.0, false);
 }
 
-pub fn render_landuse(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Landuse) void {
+pub fn draw_landuse(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Landuse) void {
     const t = feat.type orelse return;
     switch (t) {
         .POLYGON, .LINESTRING => {
@@ -234,7 +238,7 @@ pub fn render_landuse(self: *This, layer: *const Layer, feat: *const Feature, d:
         else => return,
     }
 }
-pub fn render_mountain_peak(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Mountain_peak) void {
+pub fn draw_mountain_peak(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Mountain_peak) void {
     const t = feat.type orelse return;
     switch (t) {
         .POLYGON, .LINESTRING => {
@@ -244,7 +248,7 @@ pub fn render_mountain_peak(self: *This, layer: *const Layer, feat: *const Featu
     }
     _ = .{layer};
 }
-pub fn render_park(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Park) void {
+pub fn draw_park(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Park) void {
     const t = feat.type orelse return;
     switch (t) {
         .POLYGON, .LINESTRING => {
@@ -257,7 +261,7 @@ pub fn render_park(self: *This, layer: *const Layer, feat: *const Feature, d: *c
     _ = .{layer};
 }
 /// not implemented because this draws points with text no poly / lines
-pub fn render_place(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Place) void {
+pub fn draw_place(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Place) void {
     const t = feat.type orelse return;
     switch (t) {
         .POLYGON, .LINESTRING => {
@@ -267,7 +271,7 @@ pub fn render_place(self: *This, layer: *const Layer, feat: *const Feature, d: *
     }
     _ = .{layer};
 }
-pub fn render_poi(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Poi) void {
+pub fn draw_poi(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Poi) void {
     const t = feat.type orelse return;
     switch (t) {
         .POLYGON, .LINESTRING => {
@@ -277,7 +281,7 @@ pub fn render_poi(self: *This, layer: *const Layer, feat: *const Feature, d: *co
     }
     _ = .{layer};
 }
-fn render_transport(self: *This, layer: *const Layer, feat: *const Feature, key: []const u8) void {
+fn draw_transport(self: *This, layer: *const Layer, feat: *const Feature, key: []const u8) void {
     const Keys = struct {
         pub const purple300 = &.{
             "motorway",
@@ -373,11 +377,11 @@ fn render_transport(self: *This, layer: *const Layer, feat: *const Feature, key:
     self.draw(layer, feat, col, linewidth, false);
 }
 
-pub fn render_transportation(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Transportation) void {
-    self.render_transport(layer, feat, d.class);
+pub fn draw_transportation(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Transportation) void {
+    self.draw_transport(layer, feat, d.class);
 }
-pub fn render_transportation_name(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Transportation_name) void {
-    self.render_transport(layer, feat, d.class);
+pub fn draw_transportation_name(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Transportation_name) void {
+    self.draw_transport(layer, feat, d.class);
 }
 inline fn water_layer(self: *This, layer: *const Layer, feat: *const Feature, d: []const u8) void {
     const Keys = struct {
@@ -390,10 +394,10 @@ inline fn water_layer(self: *This, layer: *const Layer, feat: *const Feature, d:
     const col = Color.ColorMap(Keys, Tailwind).map(d) orelse Color.from_hex(Tailwind.blue500);
     self.draw(layer, feat, col, 2.0, false);
 }
-pub fn render_water(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Water) void {
+pub fn draw_water(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Water) void {
     self.water_layer(layer, feat, d.class);
 }
-pub fn render_water_name(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Water_name) void {
+pub fn layer_water_name(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Water_name) void {
     const t = feat.type orelse return;
     switch (t) {
         .POLYGON, .LINESTRING => {
@@ -402,7 +406,7 @@ pub fn render_water_name(self: *This, layer: *const Layer, feat: *const Feature,
         else => return,
     }
 }
-pub fn render_waterway(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Waterway) void {
+pub fn draw_waterway(self: *This, layer: *const Layer, feat: *const Feature, d: *const dec.Waterway) void {
     const Keys = struct {
         pub const teal400 = &.{"stream"};
         pub const blue500 = &.{"river"};
@@ -421,34 +425,68 @@ fn set_context(self: *This) void {
     const alloc = self.arena.allocator();
     self.context0 = z2d.Context.init(alloc, &self.surface0);
 }
+pub fn render_basic(self: *This, tile: *const dec.Tile) !void {
+    self.set_context();
+    self.set_background(.from_hex(Tailwind.lime100));
+    const RenderAll = struct {
+        landuse: *const fn (*This, *const Layer, *const Feature, *const dec.Landuse) void = draw_landuse,
+        park: *const fn (*This, *const Layer, *const Feature, *const dec.Park) void = draw_park,
+        place: *const fn (*This, *const Layer, *const Feature, *const dec.Place) void = draw_place,
+        landcover: *const fn (*This, *const Layer, *const Feature, *const dec.Landcover) void = draw_landcover,
+
+        water: *const fn (*This, *const Layer, *const Feature, *const dec.Water) void = draw_water,
+        water_name: *const fn (*This, *const Layer, *const Feature, *const dec.Water_name) void = layer_water_name,
+
+        aeroway: *const fn (*This, *const Layer, *const Feature, *const dec.Aeroway) void = draw_aeroway,
+        aerodrome_label: *const fn (*This, *const Layer, *const Feature, *const dec.Aerodrome_label) void = draw_aerodrome_label,
+    };
+    try dec.traverse_tile(This, self, tile, RenderAll{});
+}
+pub fn render_lines(self: *This, tile: *const dec.Tile) !void {
+    self.set_context();
+    self.set_background(.transparent);
+    const RenderAll = struct {
+        waterway: *const fn (*This, *const Layer, *const Feature, *const dec.Waterway) void = draw_waterway,
+        transportation: *const fn (*This, *const Layer, *const Feature, *const dec.Transportation) void = draw_transportation,
+        transportation_name: *const fn (*This, *const Layer, *const Feature, *const dec.Transportation_name) void = draw_transportation_name,
+        boundary: *const fn (*This, *const Layer, *const Feature, *const dec.Boundary) void = draw_boundary,
+        building: *const fn (*This, *const Layer, *const Feature, *const dec.Building) void = draw_building,
+    };
+    try dec.traverse_tile(This, self, tile, RenderAll{});
+}
 
 pub fn render(self: *This, tile: *const dec.Tile) !void {
     self.set_context();
     const RenderAll = struct {
-        landuse: *const fn (*This, *const Layer, *const Feature, *const dec.Landuse) void = render_landuse,
+        landuse: *const fn (*This, *const Layer, *const Feature, *const dec.Landuse) void = draw_landuse,
 
-        park: *const fn (*This, *const Layer, *const Feature, *const dec.Park) void = render_park,
-        place: *const fn (*This, *const Layer, *const Feature, *const dec.Place) void = render_place,
-        landcover: *const fn (*This, *const Layer, *const Feature, *const dec.Landcover) void = render_landcover,
+        park: *const fn (*This, *const Layer, *const Feature, *const dec.Park) void = draw_park,
+        place: *const fn (*This, *const Layer, *const Feature, *const dec.Place) void = draw_place,
+        landcover: *const fn (*This, *const Layer, *const Feature, *const dec.Landcover) void = draw_landcover,
 
-        water: *const fn (*This, *const Layer, *const Feature, *const dec.Water) void = render_water,
-        water_name: *const fn (*This, *const Layer, *const Feature, *const dec.Water_name) void = render_water_name,
-        waterway: *const fn (*This, *const Layer, *const Feature, *const dec.Waterway) void = render_waterway,
+        water: *const fn (*This, *const Layer, *const Feature, *const dec.Water) void = draw_water,
+        water_name: *const fn (*This, *const Layer, *const Feature, *const dec.Water_name) void = layer_water_name,
+        waterway: *const fn (*This, *const Layer, *const Feature, *const dec.Waterway) void = draw_waterway,
 
-        aeroway: *const fn (*This, *const Layer, *const Feature, *const dec.Aeroway) void = render_aeroway,
-        aerodrome_label: *const fn (*This, *const Layer, *const Feature, *const dec.Aerodrome_label) void = render_aerodrome_label,
+        aeroway: *const fn (*This, *const Layer, *const Feature, *const dec.Aeroway) void = draw_aeroway,
+        aerodrome_label: *const fn (*This, *const Layer, *const Feature, *const dec.Aerodrome_label) void = draw_aerodrome_label,
 
-        transportation: *const fn (*This, *const Layer, *const Feature, *const dec.Transportation) void = render_transportation,
-        transportation_name: *const fn (*This, *const Layer, *const Feature, *const dec.Transportation_name) void = render_transportation_name,
+        transportation: *const fn (*This, *const Layer, *const Feature, *const dec.Transportation) void = draw_transportation,
+        transportation_name: *const fn (*This, *const Layer, *const Feature, *const dec.Transportation_name) void = draw_transportation_name,
 
-        boundary: *const fn (*This, *const Layer, *const Feature, *const dec.Boundary) void = render_boundary,
+        boundary: *const fn (*This, *const Layer, *const Feature, *const dec.Boundary) void = draw_boundary,
 
         // mountain_peak: *const fn (*This, *const Layer, *const Feature, *const dec.Mountain_peak) void = render_mountain_peak,
-        building: *const fn (*This, *const Layer, *const Feature, *const dec.Building) void = render_building,
+        building: *const fn (*This, *const Layer, *const Feature, *const dec.Building) void = draw_building,
         // poi: *const fn (*This, *const Layer, *const Feature, *const dec.Poi) void = render_poi,
         // housenumber: *const fn (*This, *const Layer, *const Feature, *const dec.Housenumber) void = render_housenumber,
     };
     try dec.traverse_tile(This, self, tile, RenderAll{});
+}
+
+pub fn get_pixel_rgba(self: *@This(), x: usize, y: usize) struct { u8, u8, u8, u8 } {
+    const px = self.surface0.getPixel(@intCast(x + padding_pixels), @intCast(y + padding_pixels)).?.rgba;
+    return .{ px.r, px.g, px.b, px.a };
 }
 
 fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, comptime_int }) !void {
@@ -472,7 +510,6 @@ fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, compti
             var file = try std.fs.cwd().openFile(tile_subpath, .{});
             const input = try file.reader().readAllAlloc(alloc, 10 * 1024 * 1024);
             const tile: dec.Tile = try dec.decode(input, alloc);
-            rend.set_background(.from_hex(Tailwind.lime100));
             try rend.render(&tile);
             try z2d.png_exporter.writeToPNGFile(rend.surface0, output_subpath, .{});
         }
@@ -520,7 +557,7 @@ fn test_render_1() !void {
             );
         }
     }
-    try rend.render(&tile);
+    try rend.render_lines(&tile);
     try z2d.png_exporter.writeToPNGFile(rend.surface0, "./testdata/surface0.png", .{});
 }
 
@@ -584,5 +621,37 @@ fn test_error_repro_z2d() !void {
 
 test "test kkk" {
     // try test_render_all_zoom();
-    try test_render_1();
+    // try test_render_1();
+    try test_failing();
+}
+
+fn test_failing() !void {
+    if (false) return;
+    const balloc = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(balloc);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+    var file = try std.fs.cwd().openFile("./testdata/failing_x136_y85_z8", .{});
+    const input = try file.reader().readAllAlloc(alloc, 10 * 1024 * 1024);
+    const tile: dec.Tile = try dec.decode(input, alloc);
+
+    // warning: x: 136, y: 84, z: 8 from cache
+    // warning: x: 136, y: 85, z: 8 from cache
+    // warning: x: 137, y: 84, z: 8 from cache
+    // warning: x: 137, y: 85, z: 8 from cache
+    // const img_width = 1920;
+    const width_height = 300;
+    // const width_height = 1024;
+    var rend = try This.init(alloc, width_height);
+    for (0..width_height) |x| {
+        for (0..width_height) |y| {
+            rend.surface0.putPixel(
+                @intCast(x),
+                @intCast(y),
+                z2d.Pixel{ .rgb = .{ .r = 255, .g = 255, .b = 255 } },
+            );
+        }
+    }
+    try rend.render_lines(&tile);
+    try z2d.png_exporter.writeToPNGFile(rend.surface0, "./testdata/failing.png", .{});
 }

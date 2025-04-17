@@ -97,6 +97,7 @@ pub const WRender2 = struct {
     extent: f32,
     ctx: *z2d.Context,
     rtype: Type = .Polygon,
+    padding_pixels: f32,
     pub fn render_geometry(self: *@This(), cmd_buffer: []u32) void {
         self.x = 0;
         self.y = 0;
@@ -158,6 +159,7 @@ pub const WRender2 = struct {
                 .x = self.x,
                 .y = self.y,
             });
+            std.log.warn("v: {d:.1} {d:.1}", .{ v.x, v.y });
             switch (self.rtype) {
                 .Polygon => {
                     swallow_error(self.ctx.lineTo(v.x, v.y));
@@ -184,14 +186,15 @@ pub const WRender2 = struct {
         const xdim: f32 = @floatFromInt(self.ctx.surface.getWidth());
         const ydim: f32 = @floatFromInt(self.ctx.surface.getHeight());
         return Vec2{
-            .x = std.math.clamp(self.transformf32(v.x), -1, xdim),
-            .y = std.math.clamp(self.transformf32(v.y), -1, ydim),
+            .x = std.math.clamp(self.transformf32(v.x) + self.padding_pixels, 1, xdim + self.padding_pixels - 1 - 1),
+            .y = std.math.clamp(self.transformf32(v.y) + self.padding_pixels, 1, ydim + self.padding_pixels - 1 - 1),
         };
     }
     inline fn transformf32(self: *@This(), tile_coord: f32) f32 {
-        const img_width: f32 = @floatFromInt(self.ctx.surface.getWidth());
+        const width: f32 = @floatFromInt(self.ctx.surface.getWidth());
+        const width_sub_padding = width - 2 * self.padding_pixels;
         if (self.extent <= 1) return 0;
-        return (tile_coord * (img_width)) / self.extent;
+        return (tile_coord * (width_sub_padding)) / self.extent;
     }
 
     inline fn transform(self: *@This(), tile_coord: i32) i32 {

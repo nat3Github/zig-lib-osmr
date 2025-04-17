@@ -97,8 +97,33 @@ test "download tile 2" {
         }
     }
 }
-
 test "download tile" {
     // const lat = 51.34;
     // const lon = 12.36;
+    try download_failing_tile();
+}
+
+fn download_failing_tile() !void {
+    if (true) return;
+    const gpa = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    var env_file = try std.fs.cwd().openFile("src/decode/.env", .{});
+    defer env_file.close();
+    const env_content = try env_file.readToEndAlloc(alloc, 1024 * 1024);
+    var env = try Env.init(alloc, env_content);
+    const api_key = env.get("maptiler_api_key").?;
+    // warning: x: 136, y: 84, z: 8 from cache
+    // warning: x: 136, y: 85, z: 8 from cache
+    // warning: x: 137, y: 84, z: 8 from cache
+    // warning: x: 137, y: 85, z: 8 from cache
+    const x = 136;
+    const y = 85;
+    const z = 8;
+    var file = try std.fs.cwd().createFile("testdata/failing_x136_y85_z8", .{});
+    defer file.close();
+    const dat = try downloadTile(alloc, x, y, z, api_key);
+    try file.writeAll(dat);
 }

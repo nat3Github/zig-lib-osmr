@@ -27,6 +27,10 @@ pub const Pixel = extern struct {
     pub const Green = This.init_from_u8_slice(&.{ 0, 255, 0 });
     pub const Blue = This.init_from_u8_slice(&.{ 0, 0, 255 });
 
+    pub fn init_from_rgba_tuple(rgba: struct { u8, u8, u8, u8 }) This {
+        const r, const g, const b, const a = rgba;
+        return This{ .r = r, .g = g, .b = b, .a = a };
+    }
     pub fn init_from_u8_slice(rgba: []const u8) This {
         assert(rgba.len >= 3);
         assert(rgba.len <= 4);

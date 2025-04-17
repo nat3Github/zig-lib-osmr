@@ -9,5 +9,8 @@ pub const thickness = @import("render/thickness.zig");
 pub const Tailwind = @import("tailwind");
 
 test "all" {
-    _ = .{Renderer};
+    _ = .{
+        Renderer,
+        // maptiler,
+    };
 }
