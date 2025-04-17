@@ -43,7 +43,38 @@ pub const Tile = struct {
             .bool_value = fd(7, .{ .Varint = .Simple }),
         };
 
-        pub usingnamespace protobuf.MessageMixins(@This());
+        pub fn encode(self: @This(), allocator: Allocator) Allocator.Error![]u8 {
+            return protobuf.pb_encode(self, allocator);
+        }
+        pub fn decode(input: []const u8, allocator: Allocator) protobuf.UnionDecodingError!@This() {
+            return protobuf.pb_decode(@This(), input, allocator);
+        }
+        pub fn init(allocator: Allocator) @This() {
+            return protobuf.pb_init(@This(), allocator);
+        }
+        pub fn deinit(self: @This()) void {
+            return protobuf.pb_deinit(self);
+        }
+        pub fn dupe(self: @This(), allocator: Allocator) Allocator.Error!@This() {
+            return protobuf.pb_dupe(@This(), self, allocator);
+        }
+        pub fn json_decode(input: []const u8, options: protobuf.json.ParseOptions, allocator: Allocator) !std.json.Parsed(@This()) {
+            return protobuf.pb_json_decode(@This(), input, options, allocator);
+        }
+        pub fn json_encode(self: @This(), options: protobuf.json.StringifyOptions, allocator: Allocator) ![]const u8 {
+            return protobuf.pb_json_encode(self, options, allocator);
+        }
+        // This method is used by std.json
+        // internally for deserialization. DO NOT RENAME!
+        pub fn jsonParse(allocator: Allocator, source: anytype, options: protobuf.json.ParseOptions) !@This() {
+            try jsonParseT(@This(), allocator, source, options);
+        }
+
+        // This method is used by std.json
+        // internally for serialization. DO NOT RENAME!
+        pub fn jsonStringify(self: *const @This(), jws: anytype) !void {
+            try jsonStringifyT(@This(), self, jws);
+        }
     };
 
     pub const Feature = struct {
@@ -59,7 +90,40 @@ pub const Tile = struct {
             .geometry = fd(4, .{ .PackedList = .{ .Varint = .Simple } }),
         };
 
-        pub usingnamespace protobuf.MessageMixins(@This());
+        // pub usingnamespace protobuf.MessageMixins(@This());
+
+        pub fn encode(self: @This(), allocator: Allocator) Allocator.Error![]u8 {
+            return protobuf.pb_encode(self, allocator);
+        }
+        pub fn decode(input: []const u8, allocator: Allocator) protobuf.UnionDecodingError!@This() {
+            return protobuf.pb_decode(@This(), input, allocator);
+        }
+        pub fn init(allocator: Allocator) @This() {
+            return protobuf.pb_init(@This(), allocator);
+        }
+        pub fn deinit(self: @This()) void {
+            return protobuf.pb_deinit(self);
+        }
+        pub fn dupe(self: @This(), allocator: Allocator) Allocator.Error!@This() {
+            return protobuf.pb_dupe(@This(), self, allocator);
+        }
+        pub fn json_decode(input: []const u8, options: protobuf.json.ParseOptions, allocator: Allocator) !std.json.Parsed(@This()) {
+            return protobuf.pb_json_decode(@This(), input, options, allocator);
+        }
+        pub fn json_encode(self: @This(), options: protobuf.json.StringifyOptions, allocator: Allocator) ![]const u8 {
+            return protobuf.pb_json_encode(self, options, allocator);
+        }
+        // This method is used by std.json
+        // internally for deserialization. DO NOT RENAME!
+        pub fn jsonParse(allocator: Allocator, source: anytype, options: protobuf.json.ParseOptions) !@This() {
+            try jsonParseT(@This(), allocator, source, options);
+        }
+
+        // This method is used by std.json
+        // internally for serialization. DO NOT RENAME!
+        pub fn jsonStringify(self: *const @This(), jws: anytype) !void {
+            try jsonStringifyT(@This(), self, jws);
+        }
     };
 
     pub const Layer = struct {
@@ -79,8 +143,193 @@ pub const Tile = struct {
             .extent = fd(5, .{ .Varint = .Simple }),
         };
 
-        pub usingnamespace protobuf.MessageMixins(@This());
+        // pub usingnamespace protobuf.MessageMixins(@This());
+
+        pub fn encode(self: @This(), allocator: Allocator) Allocator.Error![]u8 {
+            return protobuf.pb_encode(self, allocator);
+        }
+        pub fn decode(input: []const u8, allocator: Allocator) protobuf.UnionDecodingError!@This() {
+            return protobuf.pb_decode(@This(), input, allocator);
+        }
+        pub fn init(allocator: Allocator) @This() {
+            return protobuf.pb_init(@This(), allocator);
+        }
+        pub fn deinit(self: @This()) void {
+            return protobuf.pb_deinit(self);
+        }
+        pub fn dupe(self: @This(), allocator: Allocator) Allocator.Error!@This() {
+            return protobuf.pb_dupe(@This(), self, allocator);
+        }
+        pub fn json_decode(input: []const u8, options: protobuf.json.ParseOptions, allocator: Allocator) !std.json.Parsed(@This()) {
+            return protobuf.pb_json_decode(@This(), input, options, allocator);
+        }
+        pub fn json_encode(self: @This(), options: protobuf.json.StringifyOptions, allocator: Allocator) ![]const u8 {
+            return protobuf.pb_json_encode(self, options, allocator);
+        }
+        // This method is used by std.json
+        // internally for deserialization. DO NOT RENAME!
+        pub fn jsonParse(allocator: Allocator, source: anytype, options: protobuf.json.ParseOptions) !@This() {
+            try jsonParseT(@This(), allocator, source, options);
+        }
+
+        // This method is used by std.json
+        // internally for serialization. DO NOT RENAME!
+        pub fn jsonStringify(self: *const @This(), jws: anytype) !void {
+            try jsonStringifyT(@This(), self, jws);
+        }
     };
 
-    pub usingnamespace protobuf.MessageMixins(@This());
+    // pub usingnamespace protobuf.MessageMixins(@This());
+
+    pub fn encode(self: @This(), allocator: Allocator) Allocator.Error![]u8 {
+        return protobuf.pb_encode(self, allocator);
+    }
+    pub fn decode(input: []const u8, allocator: Allocator) protobuf.UnionDecodingError!@This() {
+        return protobuf.pb_decode(@This(), input, allocator);
+    }
+    pub fn init(allocator: Allocator) @This() {
+        return protobuf.pb_init(@This(), allocator);
+    }
+    pub fn deinit(self: @This()) void {
+        return protobuf.pb_deinit(self);
+    }
+    pub fn dupe(self: @This(), allocator: Allocator) Allocator.Error!@This() {
+        return protobuf.pb_dupe(@This(), self, allocator);
+    }
+    pub fn json_decode(input: []const u8, options: protobuf.json.ParseOptions, allocator: Allocator) !std.json.Parsed(@This()) {
+        return protobuf.pb_json_decode(@This(), input, options, allocator);
+    }
+    pub fn json_encode(self: @This(), options: protobuf.json.StringifyOptions, allocator: Allocator) ![]const u8 {
+        return protobuf.pb_json_encode(self, options, allocator);
+    }
+    // This method is used by std.json
+    // internally for deserialization. DO NOT RENAME!
+    pub fn jsonParse(allocator: Allocator, source: anytype, options: protobuf.json.ParseOptions) !@This() {
+        try jsonParseT(@This(), allocator, source, options);
+    }
+
+    // This method is used by std.json
+    // internally for serialization. DO NOT RENAME!
+    pub fn jsonStringify(self: *const @This(), jws: anytype) !void {
+        try jsonStringifyT(@This(), self, jws);
+    }
 };
+
+// This method is used by std.json
+// internally for deserialization. DO NOT RENAME!
+pub fn jsonParseT(T: type, allocator: Allocator, source: anytype, options: protobuf.json.ParseOptions) !T {
+    if (.object_begin != try source.next()) {
+        return error.UnexpectedToken;
+    }
+
+    // Mainly taken from 0.13.0's source code
+    var result: T = undefined;
+    const structInfo = @typeInfo(T).@"struct";
+    var fields_seen = [_]bool{false} ** structInfo.fields.len;
+
+    while (true) {
+        var name_token: ?protobuf.json.Token = try source.nextAllocMax(
+            allocator,
+            .alloc_if_needed,
+            options.max_value_len.?,
+        );
+        const field_name = switch (name_token.?) {
+            inline .string, .allocated_string => |slice| slice,
+            .object_end => { // No more fields.
+                break;
+            },
+            else => {
+                return error.UnexpectedToken;
+            },
+        };
+
+        inline for (structInfo.fields, 0..) |field, i| {
+            if (field.is_comptime) {
+                @compileError("comptime fields are not supported: " ++ @typeName(T) ++ "." ++ field.name);
+            }
+
+            const yes1 = std.mem.eql(u8, field.name, field_name);
+            const camel_case_name = comptime protobuf.to_camel_case(field.name);
+            var yes2: bool = undefined;
+            if (comptime std.mem.eql(u8, field.name, camel_case_name)) {
+                yes2 = false;
+            } else {
+                yes2 = std.mem.eql(u8, camel_case_name, field_name);
+            }
+
+            if (yes1 and yes2) {
+                return error.UnexpectedToken;
+            } else if (yes1 or yes2) {
+                // Free the name token now in case we're using an
+                // allocator that optimizes freeing the last
+                // allocated object. (Recursing into innerParse()
+                // might trigger more allocations.)
+                protobuf.freeAllocated(allocator, name_token.?);
+                name_token = null;
+                if (fields_seen[i]) {
+                    switch (options.duplicate_field_behavior) {
+                        .use_first => {
+                            // Parse and ignore the redundant value.
+                            // We don't want to skip the value,
+                            // because we want type checking.
+                            try protobuf.parseStructField(
+                                T,
+                                &result,
+                                field,
+                                allocator,
+                                source,
+                                options,
+                            );
+                            break;
+                        },
+                        .@"error" => return error.DuplicateField,
+                        .use_last => {},
+                    }
+                }
+                try protobuf.parseStructField(
+                    T,
+                    &result,
+                    field,
+                    allocator,
+                    source,
+                    options,
+                );
+                fields_seen[i] = true;
+                break;
+            }
+        } else {
+            // Didn't match anything.
+            protobuf.freeAllocated(allocator, name_token.?);
+            if (options.ignore_unknown_fields) {
+                try source.skipValue();
+            } else {
+                return error.UnknownField;
+            }
+        }
+    }
+    try protobuf.fillDefaultStructValues(T, &result, &fields_seen);
+    return result;
+}
+
+// This method is used by std.json
+// internally for serialization. DO NOT RENAME!
+pub fn jsonStringifyT(T: type, self: *const T, jws: anytype) !void {
+    try jws.beginObject();
+
+    inline for (@typeInfo(T).@"struct".fields) |fieldInfo| {
+        const camel_case_name = comptime protobuf.to_camel_case(fieldInfo.name);
+
+        if (switch (@typeInfo(fieldInfo.type)) {
+            .optional => @field(self, fieldInfo.name) != null,
+            else => true,
+        }) try jws.objectField(camel_case_name);
+
+        try protobuf.stringify_struct_field(
+            @field(self, fieldInfo.name),
+            @field(T._desc_table, fieldInfo.name),
+            jws,
+        );
+    }
+
+    try jws.endObject();
+}
