@@ -7,27 +7,21 @@
     //.minimum_zig_version = "0.11.0",
 
     .dependencies = .{
-        .protobuf = .{
-            .path = "../protobuf",
+        .z2d = .{
+            .url = "https://github.com/vancluever/z2d/archive/16b7d9ed4cfd7f1693f1e3fc45b14cd972a4a9cb.tar.gz",
+            .hash = "z2d-0.6.1-j5P_HsWoCgBnsWk-xjDII0nRpDo_rsdj5tDVpXQLe5sz",
         },
-        // .protobuf = .{
-        //     .url = "https://github.com/Arwalk/zig-protobuf/archive/27f8910aac3840722817d0bd56750916afd619a4.tar.gz",
-        //     .hash = "protobuf-2.0.0-0e82aqCZGwCTEk11MsgMiy1G4ZP2Q1QKX4QJ9dqfF_M6",
-        // },
-        // .z2d = .{
-        //     .path = "../z2d",
-        // },
-
         .tailwind = .{
-            .url = "https://github.com/nat3Github/lib-zig-tailwind-colors/archive/refs/heads/master.tar.gz",
-            .hash = "tailwind-0.0.0-j7vJMfstAABem1tfro5C6lYqdrB_2ucHwjxoS-kYeTEa",
+            .url = "https://github.com/nat3Github/zig-lib-tailwind-colors/archive/78c0d436f2fabceec19360f8725aeca1d1a18a6c.tar.gz",
+            .hash = "tailwind-0.0.0-j7vJMbwvAABrLuQOMwqvryXZdWfcNu3TPPcZxzEFjct8",
+        },
+        .protobuf = .{
+            .url = "https://github.com/nat3Github/zig-lib-protobuf-dev-fork/archive/765026c7b29fb8a94e5e5b224fea2dd319ac121e.tar.gz",
+            .hash = "protobuf-2.0.0-0e82agyhGwCidRG1ktCRXulks9P5ZawrK_9OctDfUDe8",
         },
         .dotenv = .{
-            .path = "../dotenv",
-        },
-        .z2d = .{
-            .url = "https://github.com/vancluever/z2d/archive/refs/heads/stroke-slope-epsilon.tar.gz",
-            .hash = "z2d-0.6.1-j5P_HpimCgALqLs70YeBQ0YPGIC8TRx1CiELnB9Eukrp",
+            .url = "https://github.com/nat3Github/zig-lib-dotenv/archive/5410fc57c2108e6248e47ca57bad264c6e9113c0.tar.gz",
+            .hash = "dotenv-0.1.1-MkB8yOIdAACFT19qGUM9twLe9eERhKPo5R_pB3Wro8lm",
         },
     },
     .paths = .{
