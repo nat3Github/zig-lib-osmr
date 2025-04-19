@@ -460,6 +460,7 @@ pub fn render_lines(self: *This, tile: *const dec.Tile) !void {
 
 pub fn render(self: *This, tile: *const dec.Tile) !void {
     self.set_context();
+    self.set_background(.from_hex(Tailwind.lime100));
     const RenderAll = struct {
         landuse: *const fn (*This, *const Layer, *const Feature, *const dec.Landuse) void = draw_landuse,
 
@@ -521,7 +522,7 @@ fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, compti
 fn test_render_all_zoom() !void {
     if (false) return;
     const gpa = std.testing.allocator;
-    try std.fs.cwd().makeDir("output");
+    std.fs.cwd().makeDir("output") catch {};
 
     const h1 = try std.Thread.spawn(.{ .allocator = gpa }, leipzig_new_york_rendering, .{.{ 0, 2 }});
     const h2 = try std.Thread.spawn(.{ .allocator = gpa }, leipzig_new_york_rendering, .{.{ 2, 4 }});
