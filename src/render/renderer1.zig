@@ -427,6 +427,7 @@ fn set_context(self: *This) void {
 }
 pub fn render_basic(self: *This, tile: *const dec.Tile) !void {
     self.set_context();
+    self.context0.?.anti_aliasing_mode = .none;
     self.set_background(.from_hex(Tailwind.lime100));
     const RenderAll = struct {
         landuse: *const fn (*This, *const Layer, *const Feature, *const dec.Landuse) void = draw_landuse,
@@ -439,17 +440,19 @@ pub fn render_basic(self: *This, tile: *const dec.Tile) !void {
 
         aeroway: *const fn (*This, *const Layer, *const Feature, *const dec.Aeroway) void = draw_aeroway,
         aerodrome_label: *const fn (*This, *const Layer, *const Feature, *const dec.Aerodrome_label) void = draw_aerodrome_label,
+        boundary: *const fn (*This, *const Layer, *const Feature, *const dec.Boundary) void = draw_boundary,
     };
     try dec.traverse_tile(This, self, tile, RenderAll{});
 }
 pub fn render_lines(self: *This, tile: *const dec.Tile) !void {
     self.set_context();
+    self.context0.?.anti_aliasing_mode = .none;
     self.set_background(.transparent);
     const RenderAll = struct {
         waterway: *const fn (*This, *const Layer, *const Feature, *const dec.Waterway) void = draw_waterway,
         transportation: *const fn (*This, *const Layer, *const Feature, *const dec.Transportation) void = draw_transportation,
-        transportation_name: *const fn (*This, *const Layer, *const Feature, *const dec.Transportation_name) void = draw_transportation_name,
-        boundary: *const fn (*This, *const Layer, *const Feature, *const dec.Boundary) void = draw_boundary,
+        // transportation_name: *const fn (*This, *const Layer, *const Feature, *const dec.Transportation_name) void = draw_transportation_name,
+        // boundary: *const fn (*This, *const Layer, *const Feature, *const dec.Boundary) void = draw_boundary,
         building: *const fn (*This, *const Layer, *const Feature, *const dec.Building) void = draw_building,
     };
     try dec.traverse_tile(This, self, tile, RenderAll{});

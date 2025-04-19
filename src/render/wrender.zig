@@ -159,7 +159,6 @@ pub const WRender2 = struct {
                 .x = self.x,
                 .y = self.y,
             });
-            std.log.warn("v: {d:.1} {d:.1}", .{ v.x, v.y });
             switch (self.rtype) {
                 .Polygon => {
                     swallow_error(self.ctx.lineTo(v.x, v.y));
