@@ -521,6 +521,7 @@ fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, compti
 fn test_render_all_zoom() !void {
     if (false) return;
     const gpa = std.testing.allocator;
+    try std.fs.cwd().makeDir("output");
 
     const h1 = try std.Thread.spawn(.{ .allocator = gpa }, leipzig_new_york_rendering, .{.{ 0, 2 }});
     const h2 = try std.Thread.spawn(.{ .allocator = gpa }, leipzig_new_york_rendering, .{.{ 2, 4 }});
@@ -623,10 +624,10 @@ fn test_error_repro_z2d() !void {
 }
 
 test "test kkk" {
-    // try test_render_all_zoom();
+    try test_render_all_zoom();
     // try test_render_1();
     // try test_error_repro_z2d();
-    try test_failing();
+    // try test_failing();
 }
 
 fn test_failing() !void {
