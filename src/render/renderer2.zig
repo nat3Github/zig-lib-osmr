@@ -45,7 +45,8 @@ const common = struct {
         };
         return hex;
     }
-    fn water_color(meta: dec.ParseMeta.WaterClass) Color {
+    fn water_color(class: ?dec.ParseMeta.WaterClass) Color {
+        const meta = class orelse Color.from_hex(Tailwind.blue400);
         return switch (meta) {
             .river => Color.from_hex(Tailwind.sky300),
             .pond => Color.from_hex(Tailwind.teal300),
@@ -116,11 +117,11 @@ const common = struct {
         };
         return hex;
     }
-    fn transport(meta: dec.ParseMeta.transportation) FeatureDrawProperties {
-        if (meta.class == null) return FeatureDrawProperties{
+    fn transport(meta: ?dec.ParseMeta.TransportationClass) FeatureDrawProperties {
+        if (meta == null) return FeatureDrawProperties{
             .color = Color.from_hex(Tailwind.neutral300),
         };
-        const tw_hex = switch (meta.class.?) {
+        const tw_hex = switch (meta.?) {
             .motorway => Color.from_hex(Tailwind.purple300),
             .trunk => Color.from_hex(Tailwind.purple300),
             .motorway_construction => Color.from_hex(Tailwind.purple300),
@@ -159,7 +160,7 @@ const common = struct {
             .transit => Color.from_hex(Tailwind.rose300),
         };
 
-        const lw = switch (meta.class.?) {
+        const lw = switch (meta.?) {
             .motorway => Line.StandardSizes.M,
             .trunk => Line.StandardSizes.M,
             .motorway_construction => Line.StandardSizes.M,
@@ -258,14 +259,27 @@ pub const rend2config = struct {
         };
     }
 
-    pub fn transportation(meta: dec.ParseMeta.transportation) FeatureDrawProperties {}
-    pub fn transportation_name(meta: dec.ParseMeta.transportation_name) FeatureDrawProperties {}
-    inline fn water_layer(meta: dec.ParseMeta.water) void {
-        const col = Color.ColorMap(Keys, Tailwind).map(d) orelse Color.from_hex(Tailwind.blue500);
+    pub fn transportation(meta: dec.ParseMeta.transportation) FeatureDrawProperties {
+        return common.transport(meta.class);
     }
-    pub fn water(meta: dec.ParseMeta.water) FeatureDrawProperties {}
-    pub fn water_name(meta: dec.ParseMeta.water_name) FeatureDrawProperties {}
-    pub fn waterway() FeatureDrawProperties {}
+    pub fn transportation_name(meta: dec.ParseMeta.transportation_name) FeatureDrawProperties {
+        return common.transport(meta.class);
+    }
+    pub fn water(meta: dec.ParseMeta.water) FeatureDrawProperties {
+        return FeatureDrawProperties{
+            .color = common.water_color(meta.class),
+        };
+    }
+    pub fn water_name(meta: dec.ParseMeta.water_name) FeatureDrawProperties {
+        return FeatureDrawProperties{
+            .color = common.water_color(meta.class),
+        };
+    }
+    pub fn waterway(meta: dec.ParseMeta.waterway) FeatureDrawProperties {
+        return FeatureDrawProperties{
+            .color = common.water_color(meta.class),
+        };
+    }
 };
 
 pub const FeatureDrawProperties = struct {
