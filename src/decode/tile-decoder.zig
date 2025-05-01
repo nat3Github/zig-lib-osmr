@@ -109,6 +109,7 @@ const LayerSchema = struct {
     pub const waterway: void = undefined;
 };
 
+const performance_measuring = true;
 pub fn traverse_tile(T: type, t: *T, tile: *const Tile, comptime order: anytype) !void {
     const layer_items = tile.layers.items;
     const order_fields = comptime @typeInfo(@TypeOf(order)).@"struct".fields;
@@ -258,6 +259,7 @@ const Brunnel = enum {
 };
 
 pub inline fn comptime_parse_struct(T: type, tpointer: anytype, layer: *const Layer, callback: *const fn (@TypeOf(tpointer), *const Layer, *const Feature, *const T) void) void {
+    // var timer = std.time.Timer.start() catch unreachable;
     const features: []Tile.Feature = layer.features.items;
     for (features) |feature| {
         var t = T{};
@@ -312,6 +314,13 @@ pub inline fn comptime_parse_struct(T: type, tpointer: anytype, layer: *const La
             }
         }
         callback(tpointer, layer, &feature, &t);
+        // const xt = @as(f64, @floatFromInt(timer.lap())) / 1e6;
+        // if (xt > 15) {
+        //     std.log.warn("layer: {s} time: {d:.3} ms", .{
+        //         layer.name.getSlice(),
+        //         xt,
+        //     });
+        // }
     }
 }
 

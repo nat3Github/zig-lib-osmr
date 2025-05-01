@@ -8,8 +8,8 @@
 
     .dependencies = .{
         .z2d = .{
-            .url = "https://github.com/vancluever/z2d/archive/16b7d9ed4cfd7f1693f1e3fc45b14cd972a4a9cb.tar.gz",
-            .hash = "z2d-0.6.1-j5P_HsWoCgBnsWk-xjDII0nRpDo_rsdj5tDVpXQLe5sz",
+            .url = "https://github.com/vancluever/z2d/archive/refs/heads/main.zip",
+            .hash = "z2d-0.6.2-j5P_HjzpCgBdWm_1K6nob_MIb5YQqW5zyUCX9B5QnUeZ",
         },
         .tailwind = .{
             .url = "https://github.com/nat3Github/zig-lib-tailwind-colors/archive/78c0d436f2fabceec19360f8725aeca1d1a18a6c.tar.gz",

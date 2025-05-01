@@ -24,7 +24,7 @@ surface0: z2d.Surface,
 context0: ?z2d.Context = null,
 counter: usize = 0,
 
-const padding_pixels = 16;
+const padding_pixels = 8;
 
 pub fn init(alloc: Allocator, width_height: u32) !This {
     const w = width_height + padding_pixels * 2;
@@ -502,6 +502,7 @@ fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, compti
         "leipzig",
         "new_york",
     };
+    var time = std.time.Timer.start() catch unreachable;
     inline for (render_list) |city| {
         inline for (zoom_level[0]..zoom_level[1]) |zoom| {
             var arena = std.heap.ArenaAllocator.init(gpa);
@@ -513,9 +514,15 @@ fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, compti
             std.log.warn("render: {s} to {s}", .{ tile_subpath, output_subpath });
             var file = try std.fs.cwd().openFile(tile_subpath, .{});
             const input = try file.reader().readAllAlloc(alloc, 10 * 1024 * 1024);
+            time.reset();
             const tile: dec.Tile = try dec.decode(input, alloc);
+            // std.log.warn("time decoding: {d:.3} ms", .{time.lap() / 1_000_000});
+            time.reset();
             try rend.render(&tile);
+            std.log.warn("time rendering: {d:.3} ms", .{time.lap() / 1_000_000});
+
             try z2d.png_exporter.writeToPNGFile(rend.surface0, output_subpath, .{});
+            // std.log.warn("time png: {d:.3} ms", .{time.lap() / 1_000_000});
         }
     }
 }
@@ -541,123 +548,8 @@ fn test_render_all_zoom() !void {
     h7.join();
 }
 
-fn test_render_1() !void {
-    if (false) return;
-    const balloc = std.testing.allocator;
-    var arena = std.heap.ArenaAllocator.init(balloc);
-    defer arena.deinit();
-    const alloc = arena.allocator();
-    var file = try std.fs.cwd().openFile("./testdata/leipzig_tile", .{});
-    const input = try file.reader().readAllAlloc(alloc, 10 * 1024 * 1024);
-    const tile: dec.Tile = try dec.decode(input, alloc);
-
-    const width_height = 1024;
-    var rend = try This.init(alloc, width_height);
-    for (0..width_height) |x| {
-        for (0..width_height) |y| {
-            rend.surface0.putPixel(
-                @intCast(x),
-                @intCast(y),
-                z2d.Pixel{ .rgb = .{ .r = 255, .g = 255, .b = 255 } },
-            );
-        }
-    }
-    try rend.render_lines(&tile);
-    try z2d.png_exporter.writeToPNGFile(rend.surface0, "./testdata/surface0.png", .{});
-}
-
-fn test_render_0() !void {
-    const balloc = std.testing.allocator;
-    var arena = std.heap.ArenaAllocator.init(balloc);
-    defer arena.deinit();
-    const alloc = arena.allocator();
-
-    const width_height = 1024;
-    var sfc = try z2d.Surface.init(
-        .image_surface_rgb,
-        alloc,
-        @intCast(width_height),
-        @intCast(width_height),
-    );
-    var context = z2d.Context.init(alloc, &sfc);
-    context.setSourceToPixel(.{ .rgb = .{ .r = 0xFF, .g = 0xFF, .b = 0x00 } });
-    try context.moveTo(30, 692);
-    try context.lineTo(25, 696);
-    try context.lineTo(0, 713);
-    try context.lineTo(0, 717);
-    try context.lineTo(0, 700);
-    try context.lineTo(6, 691);
-    try context.lineTo(0, 678);
-    try context.lineTo(0, 683);
-    try context.lineTo(0, 681);
-    try context.lineTo(0, 680);
-    try context.lineTo(0, 674);
-    try context.lineTo(0, 675);
-    try context.lineTo(0, 651);
-    try context.lineTo(23, 680);
-    try context.closePath();
-    try context.fill();
-    try z2d.png_exporter.writeToPNGFile(sfc, "./testdata/surface1.png", .{});
-}
-
-fn test_error_repro_z2d() !void {
-    const balloc = std.testing.allocator;
-    var arena = std.heap.ArenaAllocator.init(balloc);
-    defer arena.deinit();
-    const alloc = arena.allocator();
-    const width_height = 300;
-
-    var surface0 = try z2d.Surface.init(
-        .image_surface_rgb,
-        alloc,
-        @intCast(width_height),
-        @intCast(width_height),
-    );
-    var context0 = z2d.Context.init(alloc, &surface0);
-    context0.setSourceToPixel(.{ .rgb = .{ .r = 255, .b = 0, .g = 0 } });
-    try context0.lineTo(-12000, -10);
-    try context0.lineTo(10, 100);
-    try context0.lineTo(-910, 12000);
-    try context0.lineTo(10, 100);
-    try context0.stroke();
-
-    try z2d.png_exporter.writeToPNGFile(surface0, "./testdata/surfaceX.png", .{});
-}
-
-test "test kkk" {
-    try test_render_all_zoom();
-    // try test_render_1();
-    // try test_error_repro_z2d();
-    // try test_failing();
-}
-
-fn test_failing() !void {
-    if (false) return;
-    const balloc = std.testing.allocator;
-    var arena = std.heap.ArenaAllocator.init(balloc);
-    defer arena.deinit();
-    const alloc = arena.allocator();
-    var file = try std.fs.cwd().openFile("./testdata/failing_x136_y85_z8", .{});
-    const input = try file.reader().readAllAlloc(alloc, 10 * 1024 * 1024);
-    const tile: dec.Tile = try dec.decode(input, alloc);
-
-    // warning: x: 136, y: 84, z: 8 from cache
-    // warning: x: 136, y: 85, z: 8 from cache
-    // warning: x: 137, y: 84, z: 8 from cache
-    // warning: x: 137, y: 85, z: 8 from cache
-    // const img_width = 1920;
-    const width_height = 300;
-    // const width_height = 1024;
-    var rend = try This.init(alloc, width_height);
-    for (0..width_height) |x| {
-        for (0..width_height) |y| {
-            rend.surface0.putPixel(
-                @intCast(x),
-                @intCast(y),
-                z2d.Pixel{ .rgb = .{ .r = 255, .g = 255, .b = 255 } },
-            );
-        }
-    }
-    try rend.render_lines(&tile);
-    try z2d.png_exporter.writeToPNGFile(rend.surface0, "./testdata/failing.png", .{});
+test "single threaded" {
+    var timer = std.time.Timer.start() catch unreachable;
+    try leipzig_new_york_rendering(.{ 10, 16 });
+    std.debug.print("\n\n\nrenderer 1 time: {} ms", .{timer.read() / 1_000_000});
 }
