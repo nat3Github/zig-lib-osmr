@@ -24,11 +24,11 @@ const common_color = struct {
         const s = meta.class orelse
             return Color.from_hex(Tailwind.neutral400);
         const hex = switch (s) {
-            .taxiway, .runway => Color.from_hex(Tailwind.neutral300),
+            .taxiway, .runway => Color.from_hex(Tailwind.neutral200),
             .aerodrome => Color.from_hex(Tailwind.sky100),
-            .helipad, .heliport => Color.from_hex(Tailwind.amber300),
+            .helipad, .heliport => Color.from_hex(Tailwind.amber200),
             .apron => Color.from_hex(Tailwind.yellow100),
-            .gate => Color.from_hex(Tailwind.orange400),
+            .gate => Color.from_hex(Tailwind.orange300),
         };
         return hex;
     }
@@ -36,55 +36,55 @@ const common_color = struct {
         const meta = class orelse
             return Color.from_hex(Tailwind.blue400);
         return switch (meta) {
-            .river => Color.from_hex(Tailwind.sky300),
-            .pond => Color.from_hex(Tailwind.teal300),
-            .dock => Color.from_hex(Tailwind.cyan400),
+            .river => Color.from_hex(Tailwind.sky200),
+            .pond => Color.from_hex(Tailwind.teal100),
+            .dock => Color.from_hex(Tailwind.cyan200),
             .swimming_pool => Color.from_hex(Tailwind.cyan400),
-            .lake => Color.from_hex(Tailwind.blue300),
-            .ocean => Color.from_hex(Tailwind.teal400),
-            .stream => Color.from_hex(Tailwind.teal400),
-            .canal => Color.from_hex(Tailwind.cyan700),
-            .drain => Color.from_hex(Tailwind.teal800),
-            .ditch => Color.from_hex(Tailwind.teal800),
+            .lake => Color.from_hex(Tailwind.blue200),
+            .ocean => Color.from_hex(Tailwind.teal300),
+            .stream => Color.from_hex(Tailwind.teal300),
+            .canal => Color.from_hex(Tailwind.cyan300),
+            .drain => Color.from_hex(Tailwind.teal500),
+            .ditch => Color.from_hex(Tailwind.teal500),
         };
     }
     fn landcover_color(meta: dec.ParseMeta.landcover) Color {
         const s = meta.class orelse
-            return Color.from_hex(Tailwind.green300);
+            return Color.from_hex(Tailwind.green200);
         const hex = switch (s) {
             .ice => Color.from_hex(Tailwind.cyan100),
-            .rock => Color.from_hex(Tailwind.zinc500),
-            .wood => Color.from_hex(Tailwind.green300),
-            .grass => Color.from_hex(Tailwind.lime200),
-            .sand => Color.from_hex(Tailwind.yellow200),
-            .farmland => Color.from_hex(Tailwind.green200),
-            .wetland => Color.from_hex(Tailwind.orange200),
+            .rock => Color.from_hex(Tailwind.zinc300),
+            .wood => Color.from_hex(Tailwind.green200),
+            .grass => Color.from_hex(Tailwind.lime100),
+            .sand => Color.from_hex(Tailwind.yellow100),
+            .farmland => Color.from_hex(Tailwind.green100),
+            .wetland => Color.from_hex(Tailwind.orange100),
         };
         return hex;
     }
     fn landuse_color(meta: dec.ParseMeta.landuse) Color {
         const s = meta.class orelse
-            return Color.from_hex(Tailwind.green300);
+            return Color.from_hex(Tailwind.green100);
         const hex = switch (s) {
-            .railway => Color.from_hex(Tailwind.red200),
+            .railway => Color.from_hex(Tailwind.red100),
 
-            .cemetery, .quarry => Color.from_hex(Tailwind.slate300),
+            .cemetery, .quarry => Color.from_hex(Tailwind.slate100),
 
-            .dam, .military => Color.from_hex(Tailwind.emerald500),
+            .dam, .military => Color.from_hex(Tailwind.emerald200),
 
             .residential, .neighbourhood, .quarter, .suburb => Color.from_hex(Tailwind.amber100),
 
-            .commercial, .retail, .industrial => Color.from_hex(Tailwind.yellow200),
+            .commercial, .retail, .industrial => Color.from_hex(Tailwind.yellow100),
 
-            .track, .garages, .pitch => Color.from_hex(Tailwind.zinc200),
+            .track, .garages, .pitch => Color.from_hex(Tailwind.zinc100),
 
-            .stadium, .zoo, .playground, .theme_park => Color.from_hex(Tailwind.fuchsia200),
+            .stadium, .zoo, .playground, .theme_park => Color.from_hex(Tailwind.fuchsia100),
 
             .hospital => Color.from_hex(Tailwind.pink200),
 
-            .library, .kindergarten, .school, .university, .college => Color.from_hex(Tailwind.green200),
+            .library, .kindergarten, .school, .university, .college => Color.from_hex(Tailwind.green100),
 
-            .bus_station => Color.from_hex(Tailwind.orange300),
+            .bus_station => Color.from_hex(Tailwind.orange100),
         };
         return hex;
     }
@@ -93,31 +93,29 @@ const common_color = struct {
             .color = Color.from_hex(Tailwind.neutral300),
         };
         const tw_hex = switch (class.?) {
-            .motorway, .trunk, .motorway_construction, .trunk_construction => Color.from_hex(Tailwind.purple300),
+            .motorway, .trunk, .motorway_construction, .trunk_construction, .primary, .secondary, .tertiary, .primary_construction, .secondary_construction, .tertiary_construction => Color.from_hex(Tailwind.slate300),
 
-            .primary, .secondary, .tertiary, .primary_construction, .secondary_construction, .tertiary_construction => Color.from_hex(Tailwind.slate400),
+            .minor, .service, .minor_construction, .service_construction => Color.from_hex(Tailwind.gray300),
 
-            .minor, .service, .minor_construction, .service_construction => Color.from_hex(Tailwind.gray400),
+            .track, .track_construction, .path, .path_construction => Color.from_hex(Tailwind.stone300),
 
-            .track, .track_construction, .path, .path_construction => Color.from_hex(Tailwind.stone400),
+            .raceway, .raceway_construction => Color.from_hex(Tailwind.red200),
 
-            .raceway, .raceway_construction => Color.from_hex(Tailwind.red300),
+            .bridge, .pier => Color.from_hex(Tailwind.neutral300),
 
-            .bridge, .pier => Color.from_hex(Tailwind.neutral500),
+            .rail => Color.from_hex(Tailwind.rose200),
 
-            .rail => Color.from_hex(Tailwind.rose400),
+            .ferry => Color.from_hex(Tailwind.sky200),
 
-            .ferry => Color.from_hex(Tailwind.sky300),
+            .busway, .bus_guideway => Color.from_hex(Tailwind.orange100),
 
-            .busway, .bus_guideway => Color.from_hex(Tailwind.orange300),
-
-            .transit => Color.from_hex(Tailwind.rose300),
+            .transit => Color.from_hex(Tailwind.rose100),
         };
 
         const lw: f32 = switch (class.?) {
-            .motorway, .trunk, .motorway_construction, .trunk_construction, .primary, .primary_construction, .secondary, .secondary_construction, .bridge, .pier, .rail, .ferry, .transit, .busway, .bus_guideway, .tertiary, .tertiary_construction, .minor, .service, .minor_construction, .service_construction => Line.StandardSizes.M,
+            .motorway, .trunk, .motorway_construction, .trunk_construction, .primary, .primary_construction, .secondary, .secondary_construction, .bridge, .pier, .rail, .ferry, .transit, .busway, .bus_guideway, .tertiary, .tertiary_construction, .minor, .service, .minor_construction, .service_construction => Line.StandardSizes.L,
 
-            .path, .path_construction, .track, .track_construction, .raceway, .raceway_construction => Line.StandardSizes.S,
+            .path, .path_construction, .track, .track_construction, .raceway, .raceway_construction => Line.StandardSizes.M,
         };
         return FeatureDrawProperties{
             .color = tw_hex,
@@ -180,7 +178,7 @@ pub const rend2config = struct {
     }
     pub fn park(_: dec.ParseMeta.park) FeatureDrawProperties {
         return FeatureDrawProperties{
-            .color = .from_hex(Tailwind.green300),
+            .color = .from_hex(Tailwind.green200),
         };
     }
 

@@ -55,21 +55,24 @@ fn render_part(
         rctx.scale,
         rctx.offsetx,
         rctx.offsety,
-    ) catch {};
+    ) catch |e| {
+        std.log.err("{}", .{e});
+    };
 }
 
-pub fn render_tile_leaky_mt(
+/// use a general purpose allocator and free the Surface yourself
+pub fn render_tile_mt(
     alloc: Allocator,
     img_width: usize,
     img_height: usize,
     rctx: RenderContext,
 ) !z2d.Surface {
     const pool: *std.Thread.Pool = try alloc.create(std.Thread.Pool);
+    defer alloc.destroy(pool);
     try std.Thread.Pool.init(pool, .{ .allocator = alloc, .n_jobs = 16 });
     const r, const g, const b, const a = rctx.initial_px;
     var sfc = try z2d.Surface.initPixel(.{ .rgba = .{ .r = r, .g = g, .b = b, .a = a } }, alloc, @intCast(img_width), @intCast(img_height));
     try render_mtex(alloc, pool, &sfc, 16, rctx);
-    std.log.warn("hello", .{});
     pool.deinit();
     return sfc;
 }
@@ -81,12 +84,12 @@ pub fn render_mtex(
     parts: usize,
     rctx: RenderContext,
 ) !void {
-    var rctx2 = rctx;
     const wg: *std.Thread.WaitGroup = try alloc.create(std.Thread.WaitGroup);
     defer alloc.destroy(wg);
     wg.* = std.Thread.WaitGroup{};
     wg.reset();
     for (0..parts) |xi| {
+        var rctx2 = rctx;
         var pixels: []z2d.pixel.RGBA = undefined;
         const img_height: usize = @intCast(sfc.getHeight());
         const img_width: usize = @intCast(sfc.getWidth());
@@ -99,7 +102,7 @@ pub fn render_mtex(
         const yoff: f32 = @floatFromInt(xi * (img_height / parts));
         rctx2.offsety += -yoff;
         pool.spawnWg(wg, render_part, .{
-            std.testing.allocator,
+            alloc,
             pixels,
             img_width,
             rctx2,
@@ -135,12 +138,14 @@ fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, compti
             const rctx = RenderContext{
                 .dat = try dec.parse_tile(alloc, &tile),
                 .initial_px = coldef.rgba(),
-                .offsetx = 0,
-                .offsety = 0,
-                .render_fnc = root.Renderer.render_all,
+                .offsetx = 150,
+                .offsety = 500,
+                .render_fnc = root.RendererLight.render_all,
                 .scale = @floatFromInt(width_height),
             };
-            const sfc = try render_tile_leaky_mt(alloc, width_height, width_height, rctx);
+            var sfc = try render_tile_mt(arena.child_allocator, width_height, width_height, rctx);
+            defer sfc.deinit(arena.child_allocator);
+
             // const sfc = try render_tile_leaky(alloc, width_height, width_height, 0, -500, &tile);
             std.log.warn("time rendering: {d:.3} ms", .{time.lap() / 1_000_000});
             try z2d.png_exporter.writeToPNGFile(sfc, output_subpath, .{});
