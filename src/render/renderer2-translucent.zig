@@ -36,7 +36,7 @@ const common_color = struct {
         const meta = class orelse
             return Color.from_hex(Tailwind.blue400);
         return switch (meta) {
-            .river, .lake, .ocean, .stream, .pond => Color.from_hex(Tailwind.sky900),
+            .river, .lake, .ocean, .stream, .pond => Color.from_hex(Tailwind.indigo950),
             .dock, .swimming_pool, .canal, .drain, .ditch => Color.from_hex(Tailwind.teal800),
         };
     }
@@ -56,27 +56,27 @@ const common_color = struct {
     }
     fn landuse_color(meta: dec.ParseMeta.landuse) Color {
         const s = meta.class orelse
-            return Color.from_hex(Tailwind.green100);
+            return Color.from_hex(Tailwind.green500);
         const hex = switch (s) {
-            .railway => Color.from_hex(Tailwind.red100),
+            .railway => Color.from_hex(Tailwind.red500),
 
-            .cemetery, .quarry => Color.from_hex(Tailwind.slate100),
+            .cemetery, .quarry => Color.from_hex(Tailwind.slate500),
 
-            .dam, .military => Color.from_hex(Tailwind.emerald200),
+            .dam, .military => Color.from_hex(Tailwind.emerald500),
 
-            .residential, .neighbourhood, .quarter, .suburb => Color.from_hex(Tailwind.amber50),
+            .residential, .neighbourhood, .quarter, .suburb => Color.from_hex(Tailwind.amber500),
 
             .commercial, .retail, .industrial => Color.from_hex(Tailwind.yellow50),
 
-            .track, .garages, .pitch => Color.from_hex(Tailwind.zinc100),
+            .track, .garages, .pitch => Color.from_hex(Tailwind.zinc500),
 
-            .stadium, .zoo, .playground, .theme_park => Color.from_hex(Tailwind.fuchsia100),
+            .stadium, .zoo, .playground, .theme_park => Color.from_hex(Tailwind.fuchsia500),
 
-            .hospital => Color.from_hex(Tailwind.pink100),
+            .hospital => Color.from_hex(Tailwind.pink500),
 
-            .library, .kindergarten, .school, .university, .college => Color.from_hex(Tailwind.green100),
+            .library, .kindergarten, .school, .university, .college => Color.from_hex(Tailwind.green500),
 
-            .bus_station => Color.from_hex(Tailwind.orange100),
+            .bus_station => Color.from_hex(Tailwind.orange500),
         };
         return hex;
     }
@@ -85,11 +85,11 @@ const common_color = struct {
             .color = Color.from_hex(Tailwind.neutral300),
         };
         const tw_hex = switch (class.?) {
-            .motorway, .trunk, .motorway_construction, .trunk_construction, .primary, .secondary, .tertiary, .primary_construction, .secondary_construction, .tertiary_construction => Color.from_hex(Tailwind.slate500),
+            .motorway, .trunk, .motorway_construction, .trunk_construction, .primary, .secondary, .tertiary, .primary_construction, .secondary_construction, .tertiary_construction => Color.from_hex(Tailwind.slate300),
 
-            .minor, .service, .minor_construction, .service_construction => Color.from_hex(Tailwind.gray500),
+            .minor, .service, .minor_construction, .service_construction => Color.from_hex(Tailwind.gray300),
 
-            .track, .track_construction, .path, .path_construction => Color.from_hex(Tailwind.stone700),
+            .track, .track_construction, .path, .path_construction => Color.from_hex(Tailwind.stone400),
 
             .raceway, .raceway_construction => Color.from_hex(Tailwind.red800),
 
@@ -97,7 +97,7 @@ const common_color = struct {
 
             .rail => Color.from_hex(Tailwind.red900),
 
-            .ferry => Color.from_hex(Tailwind.sky700),
+            .ferry => Color.from_hex(Tailwind.sky500),
 
             .busway, .bus_guideway => Color.from_hex(Tailwind.orange800),
 
@@ -116,11 +116,11 @@ const common_color = struct {
     }
 };
 pub const rend2config = struct {
-    pub fn aeroway(meta: dec.ParseMeta.aeroway) FeatureDrawProperties {
-        return FeatureDrawProperties{
-            .color = common_color.aeroway_color(meta),
-        };
-    }
+    // pub fn aeroway(meta: dec.ParseMeta.aeroway) FeatureDrawProperties {
+    //     return FeatureDrawProperties{
+    //         .color = common_color.aeroway_color(meta),
+    //     };
+    // }
 
     pub fn boundary(meta: dec.ParseMeta.boundary) FeatureDrawProperties {
         var col = Color.from_hex(Tailwind.yellow700);
@@ -154,25 +154,28 @@ pub const rend2config = struct {
         const default_col = Color.from_hex(Tailwind.stone300);
         const col = Color.convert_hex(meta.colour) catch default_col;
         return FeatureDrawProperties{
-            .color = col,
+            .outline = col,
+            .dotted = true,
         };
     }
-    pub fn landcover(meta: dec.ParseMeta.landcover) FeatureDrawProperties {
-        return FeatureDrawProperties{
-            .color = common_color.landcover_color(meta),
-        };
-    }
-
+    // pub fn landcover(meta: dec.ParseMeta.landcover) FeatureDrawProperties {
+    //     return FeatureDrawProperties{
+    //         .color = common_color.landcover_color(meta),
+    //     };
+    // }
     pub fn landuse(meta: dec.ParseMeta.landuse) FeatureDrawProperties {
+        const col = common_color.landuse_color(meta);
         return FeatureDrawProperties{
-            .color = common_color.landuse_color(meta),
+            .outline = col,
+            // .dotted = true,
+            .line_width = 1,
         };
     }
-    pub fn park(_: dec.ParseMeta.park) FeatureDrawProperties {
-        return FeatureDrawProperties{
-            .color = .from_hex(Tailwind.green200),
-        };
-    }
+    // pub fn park(_: dec.ParseMeta.park) FeatureDrawProperties {
+    //     return FeatureDrawProperties{
+    //         .color = .from_hex(Tailwind.green200),
+    //     };
+    // }
 
     pub fn transportation(meta: dec.ParseMeta.transportation) FeatureDrawProperties {
         return common_color.transport(meta.class);
@@ -183,16 +186,21 @@ pub const rend2config = struct {
     pub fn water(meta: dec.ParseMeta.water) FeatureDrawProperties {
         return FeatureDrawProperties{
             .color = common_color.water_color(meta.class),
+            .outline = .from_hex(Tailwind.neutral300),
         };
     }
     pub fn water_name(meta: dec.ParseMeta.water_name) FeatureDrawProperties {
         return FeatureDrawProperties{
             .color = common_color.water_color(meta.class),
+            .outline = .from_hex(Tailwind.neutral300),
         };
     }
     pub fn waterway(meta: dec.ParseMeta.waterway) FeatureDrawProperties {
         return FeatureDrawProperties{
             .color = common_color.water_color(meta.class),
+            .outline = .from_hex(Tailwind.neutral300),
+            .dotted = true,
+            .line_width = Line.StandardSizes.M,
         };
     }
 };

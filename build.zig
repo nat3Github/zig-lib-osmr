@@ -4,6 +4,12 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const image_module =
+        b.dependency("image", .{
+            .target = target,
+            .optimize = optimize,
+        }).module("image");
+
     const dotenv_dep = b.dependency("dotenv", .{
         .target = target,
         .optimize = optimize,
@@ -47,6 +53,7 @@ pub fn build(b: *std.Build) !void {
     osmr_module.addImport("z2d", z2d_module);
     osmr_module.addImport("tailwind", tailwind_module);
     osmr_module.addImport("dotenv", dotenv_module);
+    osmr_module.addImport("image", image_module);
 
     const lib_test = b.addTest(.{
         .target = target,

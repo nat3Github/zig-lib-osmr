@@ -21,18 +21,6 @@ pub fn convert_hex(hex: []const u8) !RgbaCol {
     const xrgba = try hexToRgb(hex);
     return RgbaCol{ .rgba_arr = xrgba };
 }
-/// for easy tuple destructuring
-pub fn rgb(self: *const RgbaCol) struct { u8, u8, u8 } {
-    const arr = self.rgba_arr;
-    return .{ arr[0], arr[1], arr[2] };
-}
-pub fn rgba(self: *const RgbaCol) struct { u8, u8, u8, u8 } {
-    const arr = self.rgba_arr;
-    return .{ arr[0], arr[1], arr[2], arr[3] };
-}
-pub fn eql(self: *const RgbaCol, other: RgbaCol) bool {
-    return std.mem.eql(u8, &self.rgba_arr, &other.rgba_arr);
-}
 inline fn hexToRgb(hex: []const u8) ![4]u8 {
     var xrgba: [4]u8 = .{ 0, 0, 0, 255 };
     if (hex.len == 6) {
@@ -55,6 +43,18 @@ inline fn hexToRgb(hex: []const u8) ![4]u8 {
         return xrgba;
     }
     return error.FailedToParseHexColor;
+}
+/// for easy tuple destructuring
+pub fn rgb(self: *const RgbaCol) struct { u8, u8, u8 } {
+    const arr = self.rgba_arr;
+    return .{ arr[0], arr[1], arr[2] };
+}
+pub fn rgba(self: *const RgbaCol) struct { u8, u8, u8, u8 } {
+    const arr = self.rgba_arr;
+    return .{ arr[0], arr[1], arr[2], arr[3] };
+}
+pub fn eql(self: *const RgbaCol, other: RgbaCol) bool {
+    return std.mem.eql(u8, &self.rgba_arr, &other.rgba_arr);
 }
 
 // nature-inspired https://www.color-hex.com/color-palette/1040990

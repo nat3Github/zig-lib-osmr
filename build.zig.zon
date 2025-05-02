@@ -23,6 +23,10 @@
             .url = "https://github.com/nat3Github/zig-lib-dotenv/archive/5410fc57c2108e6248e47ca57bad264c6e9113c0.tar.gz",
             .hash = "dotenv-0.1.1-MkB8yOIdAACFT19qGUM9twLe9eERhKPo5R_pB3Wro8lm",
         },
+        .image = .{
+            .url = "https://github.com/nat3Github/zig-lib-image/archive/refs/heads/main.tar.gz",
+            .hash = "image-0.0.0-FDpZoiiJAADDTTJ2cwX7tdo_Jfoejvdym4pkDFpWaeK4",
+        },
     },
     .paths = .{
         "build.zig",

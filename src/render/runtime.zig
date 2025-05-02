@@ -67,12 +67,13 @@ pub fn render_tile_mt(
     img_height: usize,
     rctx: RenderContext,
 ) !z2d.Surface {
+    const parts = 1;
     const pool: *std.Thread.Pool = try alloc.create(std.Thread.Pool);
     defer alloc.destroy(pool);
-    try std.Thread.Pool.init(pool, .{ .allocator = alloc, .n_jobs = 16 });
+    try std.Thread.Pool.init(pool, .{ .allocator = alloc, .n_jobs = parts });
     const r, const g, const b, const a = rctx.initial_px;
     var sfc = try z2d.Surface.initPixel(.{ .rgba = .{ .r = r, .g = g, .b = b, .a = a } }, alloc, @intCast(img_width), @intCast(img_height));
-    try render_mtex(alloc, pool, &sfc, 16, rctx);
+    try render_mtex(alloc, pool, &sfc, parts, rctx);
     pool.deinit();
     return sfc;
 }
@@ -134,13 +135,13 @@ fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, compti
             const tile: dec.Tile = try dec.decode(input, alloc);
             // std.log.warn("time decoding: {d:.3} ms", .{time.lap() / 1_000_000});
             time.reset();
-            const coldef = Color.from_hex(Tailwind.lime200);
+            const coldef = Color.Transparent;
             const rctx = RenderContext{
                 .dat = try dec.parse_tile(alloc, &tile),
-                .initial_px = coldef.rgba(),
-                .offsetx = 150,
-                .offsety = 500,
-                .render_fnc = root.RendererLight.render_all,
+                .initial_px = coldef.to_rgba_tuple(),
+                .offsetx = 0,
+                .offsety = 0,
+                .render_fnc = root.RendererTranslucent.render_all,
                 .scale = @floatFromInt(width_height),
             };
             var sfc = try render_tile_mt(arena.child_allocator, width_height, width_height, rctx);
@@ -154,9 +155,75 @@ fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, compti
         }
     }
 }
-
 test "single threaded" {
     var timer = std.time.Timer.start() catch unreachable;
     try leipzig_new_york_rendering(.{ 10, 11 });
     std.debug.print("\n\n\nrenderer 2 time: {} ms", .{timer.read() / 1_000_000});
+}
+test "bug?" {
+    if (true) return;
+    const gpa = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    var sfc = try z2d.Surface.init(.image_surface_rgba, alloc, 1024, 1024);
+    var ctx = z2d.Context.init(alloc, &sfc);
+
+    ctx.setDashes(&.{ 10, 7 });
+    ctx.setLineWidth(2);
+    try ctx.moveTo(155.156, 86.250);
+    try ctx.lineTo(154.688, 84.375);
+    try ctx.lineTo(154.688, 83.438);
+    try ctx.lineTo(162.188, 82.500);
+    try ctx.lineTo(163.594, 89.063);
+    try ctx.lineTo(160.313, 88.125);
+    try ctx.lineTo(159.844, 89.531);
+    try ctx.lineTo(154.219, 89.063);
+    try ctx.lineTo(154.219, 90.000);
+    try ctx.lineTo(148.594, 87.656);
+    try ctx.closePath();
+    try ctx.stroke();
+}
+
+test "kkkjll" {
+    if (true) return;
+    const gpa = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    const width_height = 1920;
+    const render_list: []const []const u8 = &.{
+        "leipzig",
+    };
+    var time = std.time.Timer.start() catch unreachable;
+    inline for (render_list) |city| {
+        const alloc = arena.allocator();
+        const zoom_str = city ++ std.fmt.comptimePrint("_z{}", .{10});
+        const tile_subpath = "./testdata/" ++ zoom_str;
+        const output_subpath = "./output/kkkk" ++ zoom_str ++ ".png";
+        std.log.warn("render: {s} to {s}", .{ tile_subpath, output_subpath });
+        var file = try std.fs.cwd().openFile(tile_subpath, .{});
+        const input = try file.reader().readAllAlloc(alloc, 10 * 1024 * 1024);
+        time.reset();
+        const tile: dec.Tile = try dec.decode(input, alloc);
+        // std.log.warn("time decoding: {d:.3} ms", .{time.lap() / 1_000_000});
+        time.reset();
+        const coldef = Color.Transparent;
+        const rctx = RenderContext{
+            .dat = try dec.parse_tile(alloc, &tile),
+            .initial_px = coldef.to_rgba_tuple(),
+            .offsetx = 0,
+            .offsety = 0,
+            .render_fnc = root.RendererTranslucent.render_all,
+            .scale = @floatFromInt(width_height),
+        };
+        var sfc = try render_tile_mt(arena.child_allocator, width_height, width_height, rctx);
+        defer sfc.deinit(arena.child_allocator);
+
+        // const sfc = try render_tile_leaky(alloc, width_height, width_height, 0, -500, &tile);
+        std.log.warn("time rendering: {d:.3} ms", .{time.lap() / 1_000_000});
+        try z2d.png_exporter.writeToPNGFile(sfc, output_subpath, .{});
+        _ = arena.reset(.retain_capacity);
+        // std.log.warn("time png: {d:.3} ms", .{time.lap() / 1_000_000});
+    }
 }

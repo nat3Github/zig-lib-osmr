@@ -219,6 +219,7 @@ pub fn render_all(
 pub const DefaultColor = Color.from_hex(Tailwind.lime200);
 
 test "single threaded" {
+    if (true) return;
     var timer = std.time.Timer.start() catch unreachable;
     try leipzig_new_york_rendering(.{ 10, 11 });
     std.debug.print("\n\n\nrenderer 2 time: {} ms", .{timer.read() / 1_000_000});
