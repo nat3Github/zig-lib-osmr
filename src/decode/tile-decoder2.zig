@@ -22,7 +22,8 @@ test "tile 1" {
     const input = try file.reader().readAllAlloc(alloc, 10 * 1024 * 1024);
     const tile: Tile = try protobuf.pb_decode(Tile, input, alloc);
     const parsed = try parse_tile(alloc, &tile);
-    std.log.warn("{s}", .{try print_any_leaky(parsed, alloc)});
+    _ = parsed;
+    // std.log.warn("{s}", .{try print_any_leaky(parsed, alloc)});
 }
 
 pub fn print_any_leaky(t: anytype, alloc: Allocator) ![]const u8 {
@@ -56,6 +57,24 @@ pub fn print_any_leaky(t: anytype, alloc: Allocator) ![]const u8 {
     }
     return slist.items;
 }
+pub const LayerNames = &.{
+    "aeroway",
+    "aerodrome_label",
+    "boundary",
+    "building",
+    "housenumber",
+    "landcover",
+    "landuse",
+    "mountain_peak",
+    "park",
+    "place",
+    "poi",
+    "transportation",
+    "transportation_name",
+    "water",
+    "water_name",
+    "waterway",
+};
 /// NOTE: the definition follows the OpenMapTiles Schema (CC-BY) https://openmaptiles.org/schema/
 /// MapTiler is based on the OpenMapTiles Schema
 const LayerSchema = struct {
@@ -314,7 +333,6 @@ pub const ParseMeta = struct {
         housenumber: []const u8 = "",
     };
     pub const LandcoverClass = enum {
-        default,
         ice,
         rock,
         wood,
@@ -331,7 +349,6 @@ pub const ParseMeta = struct {
         }
     };
     pub const LanduseClass = enum {
-        default,
         railway,
         cemetery,
         quarry,
@@ -534,15 +551,15 @@ pub const DrawCmd = struct {
         fn close_path(self: *@This()) !void {
             switch (self.rtype) {
                 .Polygon => {
-                    self.append(.close_fill);
+                    try self.append(.close_fill);
                 },
                 .LineString => {
-                    self.append(.close_stroke);
+                    try self.append(.close_stroke);
                 },
             }
         }
         fn move_to(self: *@This(), dx: i32, dy: i32) !void {
-            self.append(.stroke);
+            try self.append(.stroke);
             self.add_xy(dx, dy);
             try self.points.append(self.get_normalized_vec());
         }

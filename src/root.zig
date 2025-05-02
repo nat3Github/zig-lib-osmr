@@ -12,9 +12,9 @@ pub const Tailwind = @import("tailwind");
 
 test "all" {
     _ = .{
-        decoder2,
-        // Renderer,
-        // Renderer2,
+        // decoder2,
+        Renderer,
+        Renderer2,
         // RendererBW,
         // maptiler,
     };

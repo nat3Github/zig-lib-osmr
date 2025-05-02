@@ -16,11 +16,6 @@ const Color = root.Color;
 
 const Tailwind = @import("tailwind");
 const Line = root.thickness;
-const WRender = @import("wrender2.zig").WRender2;
-
-inline fn swallow_error(res: anyerror!void) void {
-    _ = res catch |e| std.log.err("error: {}", .{e});
-}
 
 inline fn log_any(self: *This, t: anytype) void {
     var arena = std.heap.ArenaAllocator.init(self.alloc);
@@ -35,7 +30,7 @@ inline fn log_any(self: *This, t: anytype) void {
 const common = struct {
     fn aeroway_color(meta: dec.ParseMeta.aeroway) Color {
         const s = meta.class orelse
-            Color.from_hex(Tailwind.neutral400);
+            return Color.from_hex(Tailwind.neutral400);
         const hex = switch (s) {
             .taxiway, .runway => Color.from_hex(Tailwind.neutral300),
             .aerodrome => Color.from_hex(Tailwind.sky100),
@@ -46,7 +41,8 @@ const common = struct {
         return hex;
     }
     fn water_color(class: ?dec.ParseMeta.WaterClass) Color {
-        const meta = class orelse Color.from_hex(Tailwind.blue400);
+        const meta = class orelse
+            return Color.from_hex(Tailwind.blue400);
         return switch (meta) {
             .river => Color.from_hex(Tailwind.sky300),
             .pond => Color.from_hex(Tailwind.teal300),
@@ -55,7 +51,6 @@ const common = struct {
             .lake => Color.from_hex(Tailwind.blue300),
             .ocean => Color.from_hex(Tailwind.teal400),
             .stream => Color.from_hex(Tailwind.teal400),
-            .river => Color.from_hex(Tailwind.blue500),
             .canal => Color.from_hex(Tailwind.cyan700),
             .drain => Color.from_hex(Tailwind.teal800),
             .ditch => Color.from_hex(Tailwind.teal800),
@@ -63,7 +58,7 @@ const common = struct {
     }
     fn landcover_color(meta: dec.ParseMeta.landcover) Color {
         const s = meta.class orelse
-            Color.from_hex(Tailwind.green300);
+            return Color.from_hex(Tailwind.green300);
         const hex = switch (s) {
             .ice => Color.from_hex(Tailwind.cyan100),
             .rock => Color.from_hex(Tailwind.zinc500),
@@ -77,7 +72,7 @@ const common = struct {
     }
     fn landuse_color(meta: dec.ParseMeta.landuse) Color {
         const s = meta.class orelse
-            Color.from_hex(Tailwind.green300);
+            return Color.from_hex(Tailwind.green300);
         const hex = switch (s) {
             .railway => Color.from_hex(Tailwind.red200),
 
@@ -117,11 +112,11 @@ const common = struct {
         };
         return hex;
     }
-    fn transport(meta: ?dec.ParseMeta.TransportationClass) FeatureDrawProperties {
-        if (meta == null) return FeatureDrawProperties{
+    fn transport(class: ?dec.ParseMeta.TransportationClass) FeatureDrawProperties {
+        if (class == null) return FeatureDrawProperties{
             .color = Color.from_hex(Tailwind.neutral300),
         };
-        const tw_hex = switch (meta.?) {
+        const tw_hex = switch (class.?) {
             .motorway => Color.from_hex(Tailwind.purple300),
             .trunk => Color.from_hex(Tailwind.purple300),
             .motorway_construction => Color.from_hex(Tailwind.purple300),
@@ -160,7 +155,7 @@ const common = struct {
             .transit => Color.from_hex(Tailwind.rose300),
         };
 
-        const lw = switch (meta.?) {
+        const lw: f32 = switch (class.?) {
             .motorway => Line.StandardSizes.M,
             .trunk => Line.StandardSizes.M,
             .motorway_construction => Line.StandardSizes.M,
@@ -230,8 +225,8 @@ pub const rend2config = struct {
             }
         }
         return FeatureDrawProperties{
-            .color = common.aeroway_color(meta),
-            .dashed = dashed,
+            .color = col,
+            .dotted = dashed,
             .line_width = line_width,
         };
     }
@@ -290,7 +285,10 @@ pub const FeatureDrawProperties = struct {
 
 inline fn context_draw(
     ctx: *z2d.Context,
-    data: []const struct { f32, f32 },
+    offset_x: f32,
+    offset_y: f32,
+    scale: f32,
+    clipped_data: []const struct { f32, f32 },
     action: dec.DrawCmd.DrawType.Action,
     col: Color,
     line_width: f64,
@@ -301,12 +299,21 @@ inline fn context_draw(
     } else ctx.setDashes(&.{});
     const r, const g, const b = col.rgb();
     ctx.setSourceToPixel(.{ .rgb = .{ .r = r, .g = g, .b = b } });
-    try ctx.setLineWidth(line_width);
-    const x0, const y0 = data[0];
-    try ctx.moveTo(x0, y0);
-    for (data[0..]) |d| {
+    ctx.setLineWidth(line_width);
+    const w: f32 = scale;
+    {
+        const x, const y = clipped_data[0];
+        try ctx.moveTo(
+            x * w + offset_x,
+            y * w + offset_y,
+        );
+    }
+    for (clipped_data[1..]) |d| {
         const x, const y = d;
-        try ctx.lineTo(x, y);
+        try ctx.lineTo(
+            x * w + offset_x,
+            y * w + offset_y,
+        );
     }
     switch (action) {
         .close_fill => {
@@ -323,27 +330,35 @@ inline fn context_draw(
     }
     ctx.resetPath();
 }
-pub fn render(ctx: *z2d.Context, data: dec.LayerData, config: type) !void {
-    const LayerNames = &.{
-        "aeroway",
-        "aerodrome_label",
-        "boundary",
-        "building",
-        "housenumber",
+pub fn render_all(
+    ctx: *z2d.Context,
+    data: *const dec.LayerData,
+    config: type,
+    scale: f32,
+    offset_x: f32,
+    offset_y: f32,
+) !void {
+    const LayerOrder = &.{
         "landcover",
         "landuse",
-        "mountain_peak",
         "park",
-        "place",
-        "poi",
-        "transportation",
-        "transportation_name",
         "water",
         "water_name",
         "waterway",
+        "aeroway",
+        "aerodrome_label",
+        "building",
+        "boundary",
+        "transportation",
+        "transportation_name",
+
+        "housenumber",
+        "mountain_peak",
+        "place",
+        "poi",
     };
-    inline for (LayerNames) |layer_name| {
-        if (comptime @hasField(config, layer_name)) {
+    inline for (LayerOrder) |layer_name| {
+        if (comptime @hasDecl(config, layer_name)) {
             const dat = @field(data, layer_name);
             const fnc = @field(config, layer_name);
             for (dat) |layer_dat| {
@@ -353,24 +368,110 @@ pub fn render(ctx: *z2d.Context, data: dec.LayerData, config: type) !void {
                 for (draw.type) |t| {
                     const dd = draw.points[t.start..t.end];
                     const daction = t.action;
-                    context_draw(ctx, dd, daction, prop.color, prop.line_width, prop.dotted);
+                    try context_draw(ctx, offset_x, offset_y, scale, dd, daction, prop.color, prop.line_width, prop.dotted);
                 }
             }
         }
     }
 }
+const DefaultColor = Color.from_hex(Tailwind.lime200);
+pub fn render_tile_leaky(alloc: Allocator, img_width: usize, img_height: usize, offset_x: f32, offset_y: f32, tile: *const Tile) !z2d.Surface {
+    const dat = try dec.parse_tile(alloc, tile);
+    const r, const g, const b, const a = DefaultColor.rgba();
+    var sfc = try z2d.Surface.initPixel(.{ .rgba = .{ .r = r, .g = g, .b = b, .a = a } }, alloc, @intCast(img_width), @intCast(img_height));
+    var ctx = z2d.Context.init(alloc, &sfc);
+    try render_all(
+        &ctx,
+        dat,
+        rend2config,
+        @floatFromInt(img_width),
+        offset_x,
+        offset_y,
+    );
+    return sfc;
+}
+fn render_part(
+    gpa: Allocator,
+    pixels: []z2d.pixel.RGBA,
+    width: usize,
+    initial_px: z2d.pixel.RGBA,
+    scale: f32,
+    dat: *const dec.LayerData,
+    offsetx: f32,
+    offsety: f32,
+) void {
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+    var ssfc = z2d.Surface.initBuffer(
+        .image_surface_rgba,
+        initial_px,
+        pixels,
+        @intCast(width),
+        @intCast(pixels.len / width),
+    );
+    var ctx = z2d.Context.init(alloc, &ssfc);
+    render_all(
+        &ctx,
+        dat,
+        rend2config,
+        scale,
+        offsetx,
+        offsety,
+    ) catch {};
+}
+pub fn render_tile_leaky_mt(alloc: Allocator, img_width: usize, img_height: usize, tile: *const Tile) !z2d.Surface {
+    const pool: *std.Thread.Pool = try alloc.create(std.Thread.Pool);
+    try std.Thread.Pool.init(pool, .{ .allocator = alloc, .n_jobs = 16 });
+    const dat = try dec.parse_tile(alloc, tile);
+    const sfc = try render_mtex(alloc, pool, 16, img_width, img_height, &dat);
+    std.log.warn("hello", .{});
+    pool.deinit();
+    return sfc;
+}
 
-pub fn get_pixel_rgba(self: *@This(), x: usize, y: usize) struct { u8, u8, u8, u8 } {
-    const px = self.surface0.getPixel(@intCast(x), @intCast(y)).?.rgba;
+pub fn render_mtex(alloc: Allocator, pool: *std.Thread.Pool, parts: usize, img_width: usize, img_height: usize, dat: *const dec.LayerData) !z2d.Surface {
+    const wg: *std.Thread.WaitGroup = try alloc.create(std.Thread.WaitGroup);
+    defer alloc.destroy(wg);
+    wg.* = std.Thread.WaitGroup{};
+    wg.reset();
+    const r, const g, const b, const a = DefaultColor.rgba();
+    const sfc = try z2d.Surface.initPixel(.{ .rgba = .{ .r = r, .g = g, .b = b, .a = a } }, alloc, @intCast(img_width), @intCast(img_height));
+    const scale: f32 = @floatFromInt(img_width);
+    for (0..parts) |xi| {
+        var pixels: []z2d.pixel.RGBA = undefined;
+        const y_delta = (img_height / parts) * img_width;
+        if (xi == parts - 1) {
+            pixels = sfc.image_surface_rgba.buf[xi * y_delta ..];
+        } else {
+            pixels = sfc.image_surface_rgba.buf[xi * y_delta .. (xi + 1) * y_delta];
+        }
+        const yoff: f32 = @floatFromInt(xi * (img_height / parts));
+        pool.spawnWg(wg, render_part, .{
+            std.testing.allocator,
+            pixels,
+            img_width,
+            z2d.pixel.RGBA{ .r = r, .g = g, .b = b, .a = a },
+            scale,
+            dat,
+            0,
+            -yoff,
+        });
+    }
+    pool.waitAndWork(wg);
+    return sfc;
+}
+
+pub fn get_pixel_rgba(self: *z2d.Surface, x: usize, y: usize) struct { u8, u8, u8, u8 } {
+    const px = self.getPixel(@intCast(x), @intCast(y)).?.rgba;
     return .{ px.r, px.g, px.b, px.a };
 }
 
 fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, comptime_int }) !void {
     const gpa = std.testing.allocator;
-    // const gpa = std.heap.smp_allocator;
-    const width_height = 1024;
-    var rend = try This.init(gpa, width_height);
-    defer rend.deinit();
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    const width_height = 1920;
     const render_list: []const []const u8 = &.{
         "leipzig",
         "new_york",
@@ -378,8 +479,6 @@ fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, compti
     var time = std.time.Timer.start() catch unreachable;
     inline for (render_list) |city| {
         inline for (zoom_level[0]..zoom_level[1]) |zoom| {
-            var arena = std.heap.ArenaAllocator.init(gpa);
-            defer arena.deinit();
             const alloc = arena.allocator();
             const zoom_str = city ++ std.fmt.comptimePrint("_z{}", .{zoom});
             const tile_subpath = "./testdata/" ++ zoom_str;
@@ -391,10 +490,11 @@ fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, compti
             const tile: dec.Tile = try dec.decode(input, alloc);
             // std.log.warn("time decoding: {d:.3} ms", .{time.lap() / 1_000_000});
             time.reset();
-            try rend.render(&tile);
+            const sfc = try render_tile_leaky_mt(alloc, width_height, width_height, &tile);
+            // const sfc = try render_tile_leaky(alloc, width_height, width_height, 0, -500, &tile);
             std.log.warn("time rendering: {d:.3} ms", .{time.lap() / 1_000_000});
-
-            try z2d.png_exporter.writeToPNGFile(rend.surface0, output_subpath, .{});
+            try z2d.png_exporter.writeToPNGFile(sfc, output_subpath, .{});
+            _ = arena.reset(.retain_capacity);
             // std.log.warn("time png: {d:.3} ms", .{time.lap() / 1_000_000});
         }
     }
@@ -402,7 +502,7 @@ fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, compti
 
 test "single threaded" {
     var timer = std.time.Timer.start() catch unreachable;
-    try leipzig_new_york_rendering(.{ 10, 16 });
+    try leipzig_new_york_rendering(.{ 10, 11 });
     std.debug.print("\n\n\nrenderer 2 time: {} ms", .{timer.read() / 1_000_000});
 }
 

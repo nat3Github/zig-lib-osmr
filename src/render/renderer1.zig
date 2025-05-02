@@ -550,6 +550,6 @@ fn test_render_all_zoom() !void {
 
 test "single threaded" {
     var timer = std.time.Timer.start() catch unreachable;
-    try leipzig_new_york_rendering(.{ 10, 16 });
+    try leipzig_new_york_rendering(.{ 10, 11 });
     std.debug.print("\n\n\nrenderer 1 time: {} ms", .{timer.read() / 1_000_000});
 }
