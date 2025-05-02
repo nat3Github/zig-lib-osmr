@@ -10,13 +10,11 @@ const Layer = dec.Layer;
 const Feature = dec.Feature;
 const Color = root.Color;
 const Tailwind = @import("tailwind");
-fn render_part(
-    gpa: Allocator,
-    pixels: []z2d.pixel.RGBA,
-    width: usize,
-    initial_px: z2d.pixel.RGBA,
+
+pub const RenderContext = struct {
+    initial_px: struct { u8, u8, u8, u8 },
     scale: f32,
-    dat: *const dec.LayerData,
+    dat: dec.LayerData,
     offsetx: f32,
     offsety: f32,
     render_fnc: *const fn (
@@ -26,56 +24,51 @@ fn render_part(
         f32,
         f32,
     ) anyerror!void,
+};
+
+fn render_part(
+    gpa: Allocator,
+    pixels: []z2d.pixel.RGBA,
+    width: usize,
+    rctx: RenderContext,
 ) void {
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
     const alloc = arena.allocator();
+    const r, const g, const b, const a = rctx.initial_px;
     var ssfc = z2d.Surface.initBuffer(
         .image_surface_rgba,
-        initial_px,
+        z2d.pixel.RGBA{
+            .r = r,
+            .g = g,
+            .b = b,
+            .a = a,
+        },
         pixels,
         @intCast(width),
         @intCast(pixels.len / width),
     );
     var ctx = z2d.Context.init(alloc, &ssfc);
-    render_fnc(
+    rctx.render_fnc(
         &ctx,
-        dat,
-        scale,
-        offsetx,
-        offsety,
+        &rctx.dat,
+        rctx.scale,
+        rctx.offsetx,
+        rctx.offsety,
     ) catch {};
 }
+
 pub fn render_tile_leaky_mt(
     alloc: Allocator,
     img_width: usize,
     img_height: usize,
-    tile: *const Tile,
-    default_color: struct { u8, u8, u8, u8 },
-    render_fnc: *const fn (
-        *z2d.Context,
-        *const dec.LayerData,
-        f32,
-        f32,
-        f32,
-    ) anyerror!void,
+    rctx: RenderContext,
 ) !z2d.Surface {
     const pool: *std.Thread.Pool = try alloc.create(std.Thread.Pool);
     try std.Thread.Pool.init(pool, .{ .allocator = alloc, .n_jobs = 16 });
-    const dat = try dec.parse_tile(alloc, tile);
-    const r, const g, const b, const a = default_color;
+    const r, const g, const b, const a = rctx.initial_px;
     var sfc = try z2d.Surface.initPixel(.{ .rgba = .{ .r = r, .g = g, .b = b, .a = a } }, alloc, @intCast(img_width), @intCast(img_height));
-    try render_mtex(
-        alloc,
-        pool,
-        &sfc,
-        16,
-        img_width,
-        img_height,
-        &dat,
-        default_color,
-        render_fnc,
-    );
+    try render_mtex(alloc, pool, &sfc, 16, rctx);
     std.log.warn("hello", .{});
     pool.deinit();
     return sfc;
@@ -86,26 +79,17 @@ pub fn render_mtex(
     pool: *std.Thread.Pool,
     sfc: *z2d.Surface,
     parts: usize,
-    img_width: usize,
-    img_height: usize,
-    dat: *const dec.LayerData,
-    default_color: struct { u8, u8, u8, u8 },
-    render_fnc: *const fn (
-        *z2d.Context,
-        *const dec.LayerData,
-        f32,
-        f32,
-        f32,
-    ) anyerror!void,
+    rctx: RenderContext,
 ) !void {
+    var rctx2 = rctx;
     const wg: *std.Thread.WaitGroup = try alloc.create(std.Thread.WaitGroup);
     defer alloc.destroy(wg);
     wg.* = std.Thread.WaitGroup{};
     wg.reset();
-    const r, const g, const b, const a = default_color;
-    const scale: f32 = @floatFromInt(img_width);
     for (0..parts) |xi| {
         var pixels: []z2d.pixel.RGBA = undefined;
+        const img_height: usize = @intCast(sfc.getHeight());
+        const img_width: usize = @intCast(sfc.getWidth());
         const y_delta = (img_height / parts) * img_width;
         if (xi == parts - 1) {
             pixels = sfc.image_surface_rgba.buf[xi * y_delta ..];
@@ -113,16 +97,12 @@ pub fn render_mtex(
             pixels = sfc.image_surface_rgba.buf[xi * y_delta .. (xi + 1) * y_delta];
         }
         const yoff: f32 = @floatFromInt(xi * (img_height / parts));
+        rctx2.offsety += -yoff;
         pool.spawnWg(wg, render_part, .{
             std.testing.allocator,
             pixels,
             img_width,
-            z2d.pixel.RGBA{ .r = r, .g = g, .b = b, .a = a },
-            scale,
-            dat,
-            0,
-            -yoff,
-            render_fnc,
+            rctx2,
         });
     }
     pool.waitAndWork(wg);
@@ -152,7 +132,15 @@ fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, compti
             // std.log.warn("time decoding: {d:.3} ms", .{time.lap() / 1_000_000});
             time.reset();
             const coldef = Color.from_hex(Tailwind.lime200);
-            const sfc = try render_tile_leaky_mt(alloc, width_height, width_height, &tile, coldef.rgba(), root.Renderer.render_all);
+            const rctx = RenderContext{
+                .dat = try dec.parse_tile(alloc, &tile),
+                .initial_px = coldef.rgba(),
+                .offsetx = 0,
+                .offsety = 0,
+                .render_fnc = root.Renderer.render_all,
+                .scale = @floatFromInt(width_height),
+            };
+            const sfc = try render_tile_leaky_mt(alloc, width_height, width_height, rctx);
             // const sfc = try render_tile_leaky(alloc, width_height, width_height, 0, -500, &tile);
             std.log.warn("time rendering: {d:.3} ms", .{time.lap() / 1_000_000});
             try z2d.png_exporter.writeToPNGFile(sfc, output_subpath, .{});
