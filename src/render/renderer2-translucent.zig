@@ -119,8 +119,8 @@ pub const rend2config = struct {
     const g = 60;
     const water_color_transp = 180;
     const neutral: z2dRGBA = from_hex(Tailwind.neutral300);
-    const neutraldim = com.col_fo_z2d_pixl_rgb(Color.init_rgba(neutral.r, neutral.g, neutral.b, water_color_transp));
-    const transparent_gray = com.col_fo_z2d_pixl_rgb(Color.init_rgba(g, g, g, alpha));
+    const neutraldim = com.col_to_z2d_pixel_rgb(Color.init_rgba(neutral.r, neutral.g, neutral.b, water_color_transp));
+    const transparent_gray = com.col_to_z2d_pixel_rgb(Color.init_rgba(g, g, g, alpha));
     pub fn aeroway(_: dec.ParseMeta.aeroway) FeatureDrawProperties {
         return FeatureDrawProperties{
             .color = transparent_gray,
@@ -154,7 +154,7 @@ pub const rend2config = struct {
         };
     }
     pub fn building(meta: dec.ParseMeta.building) FeatureDrawProperties {
-        const col = com.col_fo_z2d_pixl_rgb(Color.convert_hex(meta.colour) catch Color.from_hex(Tailwind.stone100));
+        const col = com.col_to_z2d_pixel_rgb(Color.convert_hex(meta.colour) catch Color.from_hex(Tailwind.stone100));
         // var ccol = col;
         // ccol = ccol.demultiply();
         // ccol.a = alpha;

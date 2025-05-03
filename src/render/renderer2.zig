@@ -16,6 +16,7 @@ const z2dRGBA = com.z2dRGBA;
 const Tailwind = @import("tailwind");
 const Line = root.thickness;
 const FeatureDrawProperties = com.FeatureDrawProperties;
+const Color = root.Color;
 
 const common_color = struct {
     fn aeroway_color(meta: dec.ParseMeta.aeroway) z2dRGBA {
@@ -159,8 +160,7 @@ pub const rend2config = struct {
         };
     }
     pub fn building(meta: dec.ParseMeta.building) FeatureDrawProperties {
-        const default_col = from_hex(Tailwind.stone300);
-        const col = z2dRGBA.convert_hex(meta.colour) catch default_col;
+        const col = com.col_to_z2d_pixel_rgb(Color.convert_hex(meta.colour) catch Color.from_hex(Tailwind.stone300));
         return FeatureDrawProperties{
             .color = col,
         };
@@ -178,7 +178,7 @@ pub const rend2config = struct {
     }
     pub fn park(_: dec.ParseMeta.park) FeatureDrawProperties {
         return FeatureDrawProperties{
-            .color = .from_hex(Tailwind.green300),
+            .color = from_hex(Tailwind.green300),
         };
     }
 

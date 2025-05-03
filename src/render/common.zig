@@ -18,22 +18,22 @@ const Tailwind = @import("tailwind");
 const Line = root.thickness;
 pub fn from_hex(comptime hex: []const u8) z2d.pixel.RGBA {
     const c = Color.from_hex(hex);
-    return col_fo_z2d_pixl_rgb(c);
+    return col_to_z2d_pixel_rgb(c);
 }
 pub const z2dRGBA = z2d.pixel.RGBA;
 
 pub const FeatureDrawProperties = struct {
-    color: ?z2d.pixel.RGBA = null,
+    color: ?z2dRGBA = null,
     dotted: bool = false,
     line_width: f32 = 2,
-    outline: ?z2d.pixel.RGBA = null,
+    outline: ?z2dRGBA = null,
 };
 fn log(comptime fmt: []const u8, args: anytype) void {
     if (false) {
         std.log.warn(fmt, args);
     }
 }
-pub fn col_fo_z2d_pixl_rgb(col: Color) z2d.pixel.RGBA {
+pub fn col_to_z2d_pixel_rgb(col: Color) z2dRGBA {
     const r, const g, const b, const a = col.to_rgba_tuple();
     const rf: f32 = @as(f32, @floatFromInt(r)) / 255.0;
     const gf: f32 = @as(f32, @floatFromInt(g)) / 255.0;

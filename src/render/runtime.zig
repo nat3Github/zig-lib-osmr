@@ -10,9 +10,10 @@ const Layer = dec.Layer;
 const Feature = dec.Feature;
 const Color = root.Color;
 const Tailwind = @import("tailwind");
+const common = root.common;
 
 pub const RenderContext = struct {
-    initial_px: struct { u8, u8, u8, u8 },
+    initial_px: common.z2dRGBA,
     scale: f32,
     dat: dec.LayerData,
     offsetx: f32,
@@ -35,15 +36,9 @@ fn render_part(
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
     const alloc = arena.allocator();
-    const r, const g, const b, const a = rctx.initial_px;
     var ssfc = z2d.Surface.initBuffer(
         .image_surface_rgba,
-        z2d.pixel.RGBA{
-            .r = r,
-            .g = g,
-            .b = b,
-            .a = a,
-        },
+        rctx.initial_px,
         pixels,
         @intCast(width),
         @intCast(pixels.len / width),
@@ -71,8 +66,7 @@ pub fn render_tile_mt(
     const pool: *std.Thread.Pool = try alloc.create(std.Thread.Pool);
     defer alloc.destroy(pool);
     try std.Thread.Pool.init(pool, .{ .allocator = alloc, .n_jobs = parts });
-    const r, const g, const b, const a = rctx.initial_px;
-    var sfc = try z2d.Surface.initPixel(.{ .rgba = .{ .r = r, .g = g, .b = b, .a = a } }, alloc, @intCast(img_width), @intCast(img_height));
+    var sfc = try z2d.Surface.initPixel(.{ .rgba = rctx.initial_px }, alloc, @intCast(img_width), @intCast(img_height));
     try render_mtex(alloc, pool, &sfc, parts, rctx);
     pool.deinit();
     return sfc;
