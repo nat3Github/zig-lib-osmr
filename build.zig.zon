@@ -10,10 +10,6 @@
         // .z2d = .{
         //     .path = "../../lib/z2d",
         // },
-        .z2d = .{
-            .url = "https://github.com/vancluever/z2d/archive/refs/heads/main.zip",
-            .hash = "z2d-0.6.2-j5P_HjzpCgBdWm_1K6nob_MIb5YQqW5zyUCX9B5QnUeZ",
-        },
         .tailwind = .{
             .url = "https://github.com/nat3Github/zig-lib-tailwind-colors/archive/78c0d436f2fabceec19360f8725aeca1d1a18a6c.tar.gz",
             .hash = "tailwind-0.0.0-j7vJMbwvAABrLuQOMwqvryXZdWfcNu3TPPcZxzEFjct8",
@@ -28,7 +24,11 @@
         },
         .image = .{
             .url = "https://github.com/nat3Github/zig-lib-image/archive/refs/heads/main.tar.gz",
-            .hash = "image-0.0.0-FDpZoiiJAADDTTJ2cwX7tdo_Jfoejvdym4pkDFpWaeK4",
+            .hash = "image-0.0.0-FDpZoraOAAAbU8O_MJHw4-LYE9CNqtR3T8OMNKRmQCum",
+        },
+        .z2d = .{
+            .url = "https://github.com/vancluever/z2d/archive/2564bd95f47f6acd2d7cbb097ec5fb3006a06c77.tar.gz",
+            .hash = "z2d-0.6.2-j5P_HpXvCgDK5UhyNV4e3MbaWCW-40IFQqlGg1uE70lk",
         },
     },
     .paths = .{

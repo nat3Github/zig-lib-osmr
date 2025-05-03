@@ -132,7 +132,7 @@ fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, compti
             const coldef = Color.Transparent;
             const rctx = RenderContext{
                 .dat = try dec.parse_tile(alloc, &tile),
-                .initial_px = coldef.to_rgba_tuple(),
+                .initial_px = common.col_to_z2d_pixel_rgb(coldef),
                 .offsetx = 0,
                 .offsety = 0,
                 .render_fnc = root.RendererTranslucent.render_all,
