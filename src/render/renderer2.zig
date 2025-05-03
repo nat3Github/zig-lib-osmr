@@ -5,113 +5,111 @@ const expect = std.testing.expect;
 const z2d = @import("z2d");
 const root = @import("../root.zig");
 const dec = root.decoder2;
-const Tile = dec.Tile;
-const Layer = dec.Layer;
-const Feature = dec.Feature;
+const com = root.common;
 
 const This = @This();
 const Traverser = dec.LayerTraverser(This);
 const Cmd = dec.Cmd;
-const Color = root.Color;
+const from_hex = com.from_hex;
+const z2dRGBA = com.z2dRGBA;
 
 const Tailwind = @import("tailwind");
 const Line = root.thickness;
-const com = @import("common.zig");
 const FeatureDrawProperties = com.FeatureDrawProperties;
 
 const common_color = struct {
-    fn aeroway_color(meta: dec.ParseMeta.aeroway) Color {
+    fn aeroway_color(meta: dec.ParseMeta.aeroway) z2dRGBA {
         const s = meta.class orelse
-            return Color.from_hex(Tailwind.neutral400);
+            return from_hex(Tailwind.neutral400);
         const hex = switch (s) {
-            .taxiway, .runway => Color.from_hex(Tailwind.neutral300),
-            .aerodrome => Color.from_hex(Tailwind.sky100),
-            .helipad, .heliport => Color.from_hex(Tailwind.amber300),
-            .apron => Color.from_hex(Tailwind.yellow100),
-            .gate => Color.from_hex(Tailwind.orange400),
+            .taxiway, .runway => from_hex(Tailwind.neutral300),
+            .aerodrome => from_hex(Tailwind.sky100),
+            .helipad, .heliport => from_hex(Tailwind.amber300),
+            .apron => from_hex(Tailwind.yellow100),
+            .gate => from_hex(Tailwind.orange400),
         };
         return hex;
     }
-    fn water_color(class: ?dec.ParseMeta.WaterClass) Color {
+    fn water_color(class: ?dec.ParseMeta.WaterClass) z2dRGBA {
         const meta = class orelse
-            return Color.from_hex(Tailwind.blue400);
+            return from_hex(Tailwind.blue400);
         return switch (meta) {
-            .river => Color.from_hex(Tailwind.sky300),
-            .pond => Color.from_hex(Tailwind.teal300),
-            .dock => Color.from_hex(Tailwind.cyan400),
-            .swimming_pool => Color.from_hex(Tailwind.cyan400),
-            .lake => Color.from_hex(Tailwind.blue300),
-            .ocean => Color.from_hex(Tailwind.teal400),
-            .stream => Color.from_hex(Tailwind.teal400),
-            .canal => Color.from_hex(Tailwind.cyan700),
-            .drain => Color.from_hex(Tailwind.teal800),
-            .ditch => Color.from_hex(Tailwind.teal800),
+            .river => from_hex(Tailwind.sky300),
+            .pond => from_hex(Tailwind.teal300),
+            .dock => from_hex(Tailwind.cyan400),
+            .swimming_pool => from_hex(Tailwind.cyan400),
+            .lake => from_hex(Tailwind.blue300),
+            .ocean => from_hex(Tailwind.teal400),
+            .stream => from_hex(Tailwind.teal400),
+            .canal => from_hex(Tailwind.cyan700),
+            .drain => from_hex(Tailwind.teal800),
+            .ditch => from_hex(Tailwind.teal800),
         };
     }
-    fn landcover_color(meta: dec.ParseMeta.landcover) Color {
+    fn landcover_color(meta: dec.ParseMeta.landcover) z2dRGBA {
         const s = meta.class orelse
-            return Color.from_hex(Tailwind.green300);
+            return from_hex(Tailwind.green300);
         const hex = switch (s) {
-            .ice => Color.from_hex(Tailwind.cyan100),
-            .rock => Color.from_hex(Tailwind.zinc500),
-            .wood => Color.from_hex(Tailwind.green300),
-            .grass => Color.from_hex(Tailwind.lime200),
-            .sand => Color.from_hex(Tailwind.yellow200),
-            .farmland => Color.from_hex(Tailwind.green200),
-            .wetland => Color.from_hex(Tailwind.orange200),
+            .ice => from_hex(Tailwind.cyan100),
+            .rock => from_hex(Tailwind.zinc500),
+            .wood => from_hex(Tailwind.green300),
+            .grass => from_hex(Tailwind.lime200),
+            .sand => from_hex(Tailwind.yellow200),
+            .farmland => from_hex(Tailwind.green200),
+            .wetland => from_hex(Tailwind.orange200),
         };
         return hex;
     }
-    fn landuse_color(meta: dec.ParseMeta.landuse) Color {
+    fn landuse_color(meta: dec.ParseMeta.landuse) z2dRGBA {
         const s = meta.class orelse
-            return Color.from_hex(Tailwind.green300);
+            return from_hex(Tailwind.green300);
         const hex = switch (s) {
-            .railway => Color.from_hex(Tailwind.red200),
+            .railway => from_hex(Tailwind.red200),
 
-            .cemetery, .quarry => Color.from_hex(Tailwind.slate300),
+            .cemetery, .quarry => from_hex(Tailwind.slate300),
 
-            .dam, .military => Color.from_hex(Tailwind.emerald500),
+            .dam, .military => from_hex(Tailwind.emerald500),
 
-            .residential, .neighbourhood, .quarter, .suburb => Color.from_hex(Tailwind.amber100),
+            .residential, .neighbourhood, .quarter, .suburb => from_hex(Tailwind.amber100),
 
-            .commercial, .retail, .industrial => Color.from_hex(Tailwind.yellow200),
+            .commercial, .retail, .industrial => from_hex(Tailwind.yellow200),
 
-            .track, .garages, .pitch => Color.from_hex(Tailwind.zinc200),
+            .track, .garages, .pitch => from_hex(Tailwind.zinc200),
 
-            .stadium, .zoo, .playground, .theme_park => Color.from_hex(Tailwind.fuchsia200),
+            .stadium, .zoo, .playground, .theme_park => from_hex(Tailwind.fuchsia200),
 
-            .hospital => Color.from_hex(Tailwind.pink200),
+            .hospital => from_hex(Tailwind.pink200),
 
-            .library, .kindergarten, .school, .university, .college => Color.from_hex(Tailwind.green200),
+            .library, .kindergarten, .school, .university, .college => from_hex(Tailwind.green200),
 
-            .bus_station => Color.from_hex(Tailwind.orange300),
+            .bus_station => from_hex(Tailwind.orange300),
         };
         return hex;
     }
     fn transport(class: ?dec.ParseMeta.TransportationClass) FeatureDrawProperties {
         if (class == null) return FeatureDrawProperties{
-            .color = Color.from_hex(Tailwind.neutral300),
+            .color = from_hex(Tailwind.neutral300),
         };
         const tw_hex = switch (class.?) {
-            .motorway, .trunk, .motorway_construction, .trunk_construction => Color.from_hex(Tailwind.purple300),
+            .motorway, .trunk, .motorway_construction, .trunk_construction => from_hex(Tailwind.purple300),
 
-            .primary, .secondary, .tertiary, .primary_construction, .secondary_construction, .tertiary_construction => Color.from_hex(Tailwind.slate400),
+            .primary, .secondary, .tertiary, .primary_construction, .secondary_construction, .tertiary_construction => from_hex(Tailwind.slate400),
 
-            .minor, .service, .minor_construction, .service_construction => Color.from_hex(Tailwind.gray400),
+            .minor, .service, .minor_construction, .service_construction => from_hex(Tailwind.gray400),
 
-            .track, .track_construction, .path, .path_construction => Color.from_hex(Tailwind.stone400),
+            .track, .track_construction, .path, .path_construction => from_hex(Tailwind.stone400),
 
-            .raceway, .raceway_construction => Color.from_hex(Tailwind.red300),
+            .raceway, .raceway_construction => from_hex(Tailwind.red300),
 
-            .bridge, .pier => Color.from_hex(Tailwind.neutral500),
+            .bridge, .pier => from_hex(Tailwind.neutral500),
 
-            .rail => Color.from_hex(Tailwind.rose400),
+            .rail => from_hex(Tailwind.rose400),
 
-            .ferry => Color.from_hex(Tailwind.sky300),
+            .ferry => from_hex(Tailwind.sky300),
 
-            .busway, .bus_guideway => Color.from_hex(Tailwind.orange300),
+            .busway, .bus_guideway => from_hex(Tailwind.orange300),
 
-            .transit => Color.from_hex(Tailwind.rose300),
+            .transit => from_hex(Tailwind.rose300),
         };
 
         const lw: f32 = switch (class.?) {
@@ -133,7 +131,7 @@ pub const rend2config = struct {
     }
 
     pub fn boundary(meta: dec.ParseMeta.boundary) FeatureDrawProperties {
-        var col = Color.from_hex(Tailwind.zinc300);
+        var col = from_hex(Tailwind.zinc300);
         const line_width: f64 = Line.StandardSizes.M;
         var dashed = false;
         if (meta.admin_level) |admin_level| {
@@ -141,15 +139,15 @@ pub const rend2config = struct {
                 if (m == 1) {
                     dashed = true;
                     if (admin_level <= 2) {
-                        col = Color.from_hex(Tailwind.indigo300);
+                        col = from_hex(Tailwind.indigo300);
                     } else if (admin_level <= 4) {
-                        col = Color.from_hex(Tailwind.blue300);
+                        col = from_hex(Tailwind.blue300);
                     }
                 } else {
                     if (admin_level <= 2) {
-                        col = Color.from_hex(Tailwind.stone400);
+                        col = from_hex(Tailwind.stone400);
                     } else if (admin_level <= 4) {
-                        col = Color.from_hex(Tailwind.orange200);
+                        col = from_hex(Tailwind.orange200);
                     }
                 }
             }
@@ -161,8 +159,8 @@ pub const rend2config = struct {
         };
     }
     pub fn building(meta: dec.ParseMeta.building) FeatureDrawProperties {
-        const default_col = Color.from_hex(Tailwind.stone300);
-        const col = Color.convert_hex(meta.colour) catch default_col;
+        const default_col = from_hex(Tailwind.stone300);
+        const col = z2dRGBA.convert_hex(meta.colour) catch default_col;
         return FeatureDrawProperties{
             .color = col,
         };
@@ -216,7 +214,7 @@ pub fn render_all(
 ) !void {
     return com.render_all(ctx, data, rend2config, scale, offset_x, offset_y);
 }
-pub const DefaultColor = Color.from_hex(Tailwind.lime200);
+pub const DefaultColor = from_hex(Tailwind.lime200);
 
 test "single threaded" {
     if (true) return;

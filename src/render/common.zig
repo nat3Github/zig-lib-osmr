@@ -16,17 +16,30 @@ const Color = root.Color;
 
 const Tailwind = @import("tailwind");
 const Line = root.thickness;
+pub fn from_hex(comptime hex: []const u8) z2d.pixel.RGBA {
+    const c = Color.from_hex(hex);
+    return col_fo_z2d_pixl_rgb(c);
+}
+pub const z2dRGBA = z2d.pixel.RGBA;
 
 pub const FeatureDrawProperties = struct {
-    color: ?Color = null,
+    color: ?z2d.pixel.RGBA = null,
     dotted: bool = false,
     line_width: f32 = 2,
-    outline: ?Color = null,
+    outline: ?z2d.pixel.RGBA = null,
 };
 fn log(comptime fmt: []const u8, args: anytype) void {
     if (false) {
         std.log.warn(fmt, args);
     }
+}
+pub fn col_fo_z2d_pixl_rgb(col: Color) z2d.pixel.RGBA {
+    const r, const g, const b, const a = col.to_rgba_tuple();
+    const rf: f32 = @as(f32, @floatFromInt(r)) / 255.0;
+    const gf: f32 = @as(f32, @floatFromInt(g)) / 255.0;
+    const bf: f32 = @as(f32, @floatFromInt(b)) / 255.0;
+    const af: f32 = @as(f32, @floatFromInt(a)) / 255.0;
+    return z2d.Pixel.fromColor(.{ .rgba = .{ rf, gf, bf, af } }).rgba;
 }
 
 inline fn context_draw(
@@ -36,7 +49,7 @@ inline fn context_draw(
     scale: f32,
     clipped_data: []const struct { f32, f32 },
     action: dec.DrawCmd.DrawType.Action,
-    col: Color,
+    pixel: z2d.pixel.RGBA,
     line_width: f64,
     dotted: bool,
     dont_fill: bool,
@@ -49,12 +62,10 @@ inline fn context_draw(
         , .{});
         ctx.setDashes(&.{ 10, 7 });
     } else ctx.setDashes(&.{});
-    const r, const g, const b, const a = col.to_rgba_tuple();
     log(
-        \\ctx.setSourceToPixel(.{{ .rgba = .{{ .r = {}, .g = {}, .b = {}, .a = {}  }} }});
-    , .{ r, g, b, a });
-    ctx.setSourceToPixel(.{ .rgba = .{ .r = r, .g = g, .b = b, .a = a } });
-
+        \\ctx.setSourceToPixel({any});
+    , .{pixel});
+    ctx.setSourceToPixel(.{ .rgba = pixel });
     log(
         \\ctx.setLineWidth({d:.3});
     , .{line_width});

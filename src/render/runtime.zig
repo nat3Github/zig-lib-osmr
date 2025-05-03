@@ -156,7 +156,7 @@ fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, compti
     }
 }
 test "single threaded" {
-    if (true) return;
+    // if (true) return;
     var timer = std.time.Timer.start() catch unreachable;
     try leipzig_new_york_rendering(.{ 10, 11 });
     std.debug.print("\n\n\nrenderer 2 time: {} ms", .{timer.read() / 1_000_000});
@@ -217,7 +217,7 @@ test "bug ?" {
 }
 
 test "kkkjll" {
-    // if (true) return;
+    if (true) return;
     const gpa = std.testing.allocator;
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
