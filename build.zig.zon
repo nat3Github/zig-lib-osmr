@@ -8,9 +8,12 @@
 
     .dependencies = .{
         .z2d = .{
-            .url = "https://github.com/vancluever/z2d/archive/refs/heads/main.zip",
-            .hash = "z2d-0.6.2-j5P_HjzpCgBdWm_1K6nob_MIb5YQqW5zyUCX9B5QnUeZ",
+            .path = "../../lib/z2d",
         },
+        // .z2d = .{
+        //     .url = "https://github.com/vancluever/z2d/archive/refs/heads/main.zip",
+        //     .hash = "z2d-0.6.2-j5P_HjzpCgBdWm_1K6nob_MIb5YQqW5zyUCX9B5QnUeZ",
+        // },
         .tailwind = .{
             .url = "https://github.com/nat3Github/zig-lib-tailwind-colors/archive/78c0d436f2fabceec19360f8725aeca1d1a18a6c.tar.gz",
             .hash = "tailwind-0.0.0-j7vJMbwvAABrLuQOMwqvryXZdWfcNu3TPPcZxzEFjct8",

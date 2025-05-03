@@ -67,7 +67,7 @@ pub fn render_tile_mt(
     img_height: usize,
     rctx: RenderContext,
 ) !z2d.Surface {
-    const parts = 1;
+    const parts = 16;
     const pool: *std.Thread.Pool = try alloc.create(std.Thread.Pool);
     defer alloc.destroy(pool);
     try std.Thread.Pool.init(pool, .{ .allocator = alloc, .n_jobs = parts });
@@ -156,6 +156,7 @@ fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, compti
     }
 }
 test "single threaded" {
+    if (true) return;
     var timer = std.time.Timer.start() catch unreachable;
     try leipzig_new_york_rendering(.{ 10, 11 });
     std.debug.print("\n\n\nrenderer 2 time: {} ms", .{timer.read() / 1_000_000});
@@ -185,9 +186,38 @@ test "bug?" {
     try ctx.closePath();
     try ctx.stroke();
 }
+test "bug ?" {
+    const gpa = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    var sfc = try z2d.Surface.init(.image_surface_rgba, alloc, 1920, 1920);
+    var ctx = z2d.Context.init(alloc, &sfc);
+    ctx.setSourceToPixel(.{ .rgba = .{ .r = 214, .g = 214, .b = 214, .a = 180 } });
+    ctx.setLineWidth(1.000);
+    try ctx.moveTo(329.531, 644.063);
+    try ctx.lineTo(328.594, 650.156);
+    try ctx.lineTo(325.781, 662.813);
+    try ctx.lineTo(321.094, 667.969);
+    try ctx.lineTo(308.438, 673.125);
+    try ctx.lineTo(302.813, 673.125);
+    try ctx.lineTo(298.125, 671.250);
+    try ctx.lineTo(294.844, 668.438);
+    try ctx.lineTo(292.969, 663.750);
+    try ctx.lineTo(291.563, 637.500);
+    try ctx.lineTo(293.906, 629.531);
+    try ctx.lineTo(297.656, 625.781);
+    try ctx.lineTo(303.750, 622.969);
+    try ctx.lineTo(309.375, 622.969);
+    try ctx.lineTo(314.531, 625.313);
+    try ctx.lineTo(328.594, 640.781);
+    try ctx.closePath();
+    try ctx.fill();
+}
 
 test "kkkjll" {
-    if (true) return;
+    // if (true) return;
     const gpa = std.testing.allocator;
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();

@@ -23,6 +23,11 @@ pub const FeatureDrawProperties = struct {
     line_width: f32 = 2,
     outline: ?Color = null,
 };
+fn log(comptime fmt: []const u8, args: anytype) void {
+    if (false) {
+        std.log.warn(fmt, args);
+    }
+}
 
 inline fn context_draw(
     ctx: *z2d.Context,
@@ -37,39 +42,52 @@ inline fn context_draw(
     dont_fill: bool,
 ) !void {
     const w: f32 = scale;
-    // std.log.warn("\n\n", .{});
+    log("\n\n", .{});
     if (dotted) {
-        // std.log.warn(
-        //     \\ctx.setDashes(&.{{ 10, 7 }});
-        // , .{});
-        // ctx.setDashes(&.{ 10, 7 });
+        log(
+            \\ctx.setDashes(&.{{ 10, 7 }});
+        , .{});
+        ctx.setDashes(&.{ 10, 7 });
     } else ctx.setDashes(&.{});
-    const r, const g, const b = col.to_rgb_tuple();
-    ctx.setSourceToPixel(.{ .rgb = .{ .r = r, .g = g, .b = b } });
+    const r, const g, const b, const a = col.to_rgba_tuple();
+    log(
+        \\ctx.setSourceToPixel(.{{ .rgba = .{{ .r = {}, .g = {}, .b = {}, .a = {}  }} }});
+    , .{ r, g, b, a });
+    ctx.setSourceToPixel(.{ .rgba = .{ .r = r, .g = g, .b = b, .a = a } });
+
+    log(
+        \\ctx.setLineWidth({d:.3});
+    , .{line_width});
     ctx.setLineWidth(line_width);
-    // std.log.warn(
-    //     \\ctx.setLineWidth({d:.3});
-    // , .{line_width});
     {
         const x, const y = clipped_data[0];
         const dx = x * w + offset_x;
         const dy = y * w + offset_y;
+        log("try ctx.moveTo({d:.3},{d:.3});", .{ dx, dy });
         try ctx.moveTo(dx, dy);
-        // std.log.warn("try ctx.moveTo({d:.3},{d:.3});", .{ dx, dy });
     }
     for (clipped_data[1..]) |d| {
         const x, const y = d;
         const dx = x * w + offset_x;
         const dy = y * w + offset_y;
+        log("try ctx.lineTo({d:.3},{d:.3});", .{ dx, dy });
         try ctx.lineTo(dx, dy);
-        // std.log.warn("try ctx.lineTo({d:.3},{d:.3});", .{ dx, dy });
     }
     switch (action) {
         .close_fill => {
+            log(
+                \\try ctx.closePath();
+            , .{});
             try ctx.closePath();
             if (dont_fill) {
+                log(
+                    \\try ctx.stroke();
+                , .{});
                 try ctx.stroke();
             } else {
+                log(
+                    \\try ctx.fill();
+                , .{});
                 try ctx.fill();
             }
         },
