@@ -75,7 +75,7 @@ inline fn context_draw(
         const dx = x * w + offset_x;
         const dy = y * w + offset_y;
         log("try ctx.moveTo({d:.3},{d:.3});", .{ dx, dy });
-        try ctx.moveTo(dx, dy);
+        try ctx.moveTo(dx + 0.1, dy); // workaround for not correctly drawing closed paths with matching start and endpoint
     }
     for (clipped_data[1..]) |d| {
         const x, const y = d;
