@@ -27,8 +27,8 @@
             .hash = "image-0.0.0-FDpZoraOAAAbU8O_MJHw4-LYE9CNqtR3T8OMNKRmQCum",
         },
         .z2d = .{
-            .url = "https://github.com/vancluever/z2d/archive/2564bd95f47f6acd2d7cbb097ec5fb3006a06c77.tar.gz",
-            .hash = "z2d-0.6.2-j5P_HpXvCgDK5UhyNV4e3MbaWCW-40IFQqlGg1uE70lk",
+            .url = "https://github.com/vancluever/z2d/archive/362c87c09aa04c4ed6ab6d0145b796e818320490.zip",
+            .hash = "z2d-0.6.2-j5P_Hn7vCgCPqIJks2FXOyLZVSgoJE2qPXFJw1psPdKJ",
         },
     },
     .paths = .{
