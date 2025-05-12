@@ -1,4 +1,6 @@
-# osm maps tile renderer in zig
+# OSMR
+
+## osm maps tile renderer in zig
 
 want to render maps similar to i.e. google maps?
 
@@ -29,3 +31,7 @@ implement custom maps rendering by looking at:
 const renderer = @import("osmr").renderer;
 ...
 ```
+
+# licence
+
+MIT
