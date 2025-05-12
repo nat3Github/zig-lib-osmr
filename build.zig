@@ -6,24 +6,29 @@ const GitDependency = update.GitDependency;
 fn update_step(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
     const deps = &.{
         GitDependency{
+            // dotenv
             .url = "https://github.com/nat3Github/zig-lib-dotenv",
             .branch = "main",
         },
         GitDependency{
+            // tailwind
             .url = "https://github.com/nat3Github/zig-lib-tailwind-colors",
             .branch = "master",
         },
         GitDependency{
+            // image
             .url = "https://github.com/nat3Github/zig-lib-image",
             .branch = "main",
         },
         GitDependency{
-            .url = "https://github.com/nat3Github/zig-lib-protobuf-dev-fork",
-            .branch = "master",
-        },
-        GitDependency{
+            // z2d
             .url = "https://github.com/nat3Github/zig-lib-z2d-dev-fork",
             .branch = "main",
+        },
+        GitDependency{
+            // protobuf
+            .url = "https://github.com/nat3Github/zig-lib-protobuf-dev-fork",
+            .branch = "master",
         },
     };
     try update.update_dependency(step.owner.allocator, deps);
