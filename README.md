@@ -4,10 +4,10 @@
 
 want to render maps similar to i.e. google maps?
 
-![demo1] (https://github.com/nat3Github/zig-lib-osmr/blob/master/n-leipzig_z10.png)
-![demo1] (https://github.com/nat3Github/zig-lib-osmr/blob/master/n-new_york_z10.png)
-![demo1] (https://github.com/nat3Github/zig-lib-osmr/blob/master/leipzig_z10.png)
-![demo1] (https://github.com/nat3Github/zig-lib-osmr/blob/master/new_york_z10.png)
+![demo1](https://github.com/nat3Github/zig-lib-osmr/blob/master/n-leipzig_z10.png)
+![demo1](https://github.com/nat3Github/zig-lib-osmr/blob/master/n-new_york_z20.png)
+![demo1](https://github.com/nat3Github/zig-lib-osmr/blob/master/leipzig_z10.png)
+![demo1](https://github.com/nat3Github/zig-lib-osmr/blob/master/new_york_z10.png)
 
 ## features
 
