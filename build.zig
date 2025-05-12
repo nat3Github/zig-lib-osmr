@@ -1,8 +1,36 @@
 const std = @import("std");
-const protobuf = @import("protobuf");
+const Allocator = std.mem.Allocator;
+
+const update = @import("update.zig");
+const GitDependency = update.GitDependency;
+fn update_step(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
+    const deps = &.{
+        GitDependency{
+            .url = "https://github.com/nat3Github/zig-lib-dotenv",
+            .branch = "main",
+        },
+        GitDependency{
+            .url = "https://github.com/nat3Github/zig-lib-tailwind-colors",
+            .branch = "main",
+        },
+        GitDependency{
+            .url = "https://github.com/nat3Github/zig-lib-image",
+            .branch = "main",
+        },
+        GitDependency{
+            .url = "https://github.com/Arwalk/zig-protobuf",
+            .branch = "main",
+        },
+    };
+    try update.update_dependency(step.owner.allocator, deps);
+}
+
 pub fn build(b: *std.Build) !void {
+    const step = b.step("update", "update git dependencies");
+    step.makeFn = update_step;
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    if (true) return;
 
     const image_module =
         b.dependency("image", .{
@@ -32,6 +60,8 @@ pub fn build(b: *std.Build) !void {
     });
     const protobuf_module = protobuf_dep.module("protobuf");
     const gen_proto_step = b.step("gen-proto", "generates zig files from protocol buffer definitions");
+
+    const protobuf = @import("protobuf");
     const protoc_step = protobuf.RunProtocStep.create(b, protobuf_dep.builder, target, .{
         .destination_directory = b.path("src/decode/vector_tile-proto"),
         .source_files = &.{
@@ -60,17 +90,6 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
         .root_module = osmr_module,
     });
-    const lldb = b.addSystemCommand(&.{
-        "lldb",
-        // add lldb flags before --
-        "--",
-    });
-    // appends the unit_tests executable path to the lldb command line
-    lldb.addArtifactArg(lib_test);
-    // lldb.addArg can add arguments after the executable path
-
-    const lldb_step = b.step("debug", "run the tests under lldb");
-    lldb_step.dependOn(&lldb.step);
 
     const lib_test_run = b.addRunArtifact(lib_test);
     step_test.dependOn(&lib_test_run.step);

@@ -1,42 +1,30 @@
 .{
     .name = .osmr,
     .fingerprint = 0x7aeeebba704b9266,
-
     .version = "0.0.0",
-
-    //.minimum_zig_version = "0.11.0",
-
     .dependencies = .{
-        // .z2d = .{
-        //     .path = "../../lib/z2d",
-        // },
-        .tailwind = .{
-            .url = "https://github.com/nat3Github/zig-lib-tailwind-colors/archive/78c0d436f2fabceec19360f8725aeca1d1a18a6c.tar.gz",
-            .hash = "tailwind-0.0.0-j7vJMbwvAABrLuQOMwqvryXZdWfcNu3TPPcZxzEFjct8",
-        },
-        .protobuf = .{
-            .url = "https://github.com/nat3Github/zig-lib-protobuf-dev-fork/archive/765026c7b29fb8a94e5e5b224fea2dd319ac121e.tar.gz",
-            .hash = "protobuf-2.0.0-0e82agyhGwCidRG1ktCRXulks9P5ZawrK_9OctDfUDe8",
-        },
         .dotenv = .{
-            .url = "https://github.com/nat3Github/zig-lib-dotenv/archive/5410fc57c2108e6248e47ca57bad264c6e9113c0.tar.gz",
+            .url = "git+https://github.com/nat3Github/zig-lib-dotenv#5410fc57c2108e6248e47ca57bad264c6e9113c0",
             .hash = "dotenv-0.1.1-MkB8yOIdAACFT19qGUM9twLe9eERhKPo5R_pB3Wro8lm",
         },
-        .image = .{
-            .url = "https://github.com/nat3Github/zig-lib-image/archive/refs/heads/main.tar.gz",
-            .hash = "image-0.0.0-FDpZoraOAAAbU8O_MJHw4-LYE9CNqtR3T8OMNKRmQCum",
+        .tailwind = .{
+            .url = "git+https://github.com/nat3Github/zig-lib-tailwind-colors#d537cda9f7f8053597f4423fcaa8babe8deb7d09",
+            .hash = "tailwind-0.0.0-j7vJMd0vAAD73YpI5PS1FuPJlYrlGCwGvM5E-xYtWWgl",
         },
-        .z2d = .{
-            .url = "https://github.com/vancluever/z2d/archive/362c87c09aa04c4ed6ab6d0145b796e818320490.zip",
-            .hash = "z2d-0.6.2-j5P_Hn7vCgCPqIJks2FXOyLZVSgoJE2qPXFJw1psPdKJ",
+        .image = .{
+            .url = "git+https://github.com/nat3Github/zig-lib-image#73bbce55f9e31241167d38c95ccab173c358e4b6",
+            .hash = "image-0.0.0-FDpZou-lAACxPZzf2oAlvnS05DbLEdWZmsFkm9jJibmO",
+        },
+        .protobuf = .{
+            .url = "git+https://github.com/Arwalk/zig-protobuf#3e55a9a9a9eff6ef8183bcb6dfdf361fdf876449",
+            .hash = "protobuf-0.0.0-AAAAADVmGAC9-mqJEn-4RpqqUPfKXNuAhBX5XdJPqe6d",
         },
     },
     .paths = .{
         "build.zig",
         "build.zig.zon",
         "src",
-        // For example...
-        //"LICENSE",
-        //"README.md",
+        "LICENSE",
+        "README.md",
     },
 }
