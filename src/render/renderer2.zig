@@ -217,7 +217,7 @@ pub fn render_all(
 pub const DefaultColor = from_hex(Tailwind.lime200);
 
 test "single threaded" {
-    if (true) return;
+    // if (true) return;
     var timer = std.time.Timer.start() catch unreachable;
     try leipzig_new_york_rendering(.{ 10, 11 });
     std.debug.print("\n\n\nrenderer 2 time: {} ms", .{timer.read() / 1_000_000});
@@ -227,9 +227,10 @@ fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, compti
     const gpa = std.testing.allocator;
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
-    const width_height = 1920;
+    const width_height = 720;
     const render_list: []const []const u8 = &.{
         "leipzig",
+        "new_york",
     };
     var time = std.time.Timer.start() catch unreachable;
     inline for (render_list) |city| {
@@ -237,7 +238,7 @@ fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, compti
             const alloc = arena.allocator();
             const zoom_str = city ++ std.fmt.comptimePrint("_z{}", .{zoom});
             const tile_subpath = "./testdata/" ++ zoom_str;
-            const output_subpath = "./output/k" ++ zoom_str ++ ".png";
+            const output_subpath = "./output/normal" ++ zoom_str ++ ".png";
             std.log.warn("render: {s} to {s}", .{ tile_subpath, output_subpath });
             var file = try std.fs.cwd().openFile(tile_subpath, .{});
             const input = try file.reader().readAllAlloc(alloc, 10 * 1024 * 1024);
@@ -245,20 +246,16 @@ fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, compti
             const tile: dec.Tile = try dec.decode(input, alloc);
             // std.log.warn("time decoding: {d:.3} ms", .{time.lap() / 1_000_000});
             time.reset();
-            var sfc = try z2d.Surface.initPixel(.{ .rgba = .{
-                .r = 255,
-                .g = 255,
-                .b = 255,
-                .a = 255,
-            } }, alloc, @intCast(width_height), @intCast(width_height));
+            const bascol = from_hex(Tailwind.lime100);
+            var sfc = try z2d.Surface.initPixel(.{ .rgba = bascol }, alloc, @intCast(width_height), @intCast(width_height));
             var ctx = z2d.Context.init(alloc, &sfc);
             const data = try dec.parse_tile(alloc, &tile);
             try render_all(
                 &ctx,
                 &data,
                 @floatCast(width_height),
-                500,
-                500,
+                0,
+                0,
             );
             // const sfc = try render_tile_leaky(alloc, width_height, width_height, 0, -500, &tile);
             std.log.warn("time rendering: {d:.3} ms", .{time.lap() / 1_000_000});

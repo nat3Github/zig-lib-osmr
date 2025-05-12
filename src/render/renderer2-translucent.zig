@@ -245,6 +245,7 @@ fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, compti
     const width_height = 1920;
     const render_list: []const []const u8 = &.{
         "leipzig",
+        "new_york",
     };
     var time = std.time.Timer.start() catch unreachable;
     inline for (render_list) |city| {

@@ -110,7 +110,7 @@ fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, compti
     const gpa = std.testing.allocator;
     var arena = std.heap.ArenaAllocator.init(gpa);
     defer arena.deinit();
-    const width_height = 1920;
+    const width_height = 720;
     const render_list: []const []const u8 = &.{
         "leipzig",
         "new_york",
