@@ -11,14 +11,18 @@ fn update_step(step: *std.Build.Step, _: std.Build.Step.MakeOptions) !void {
         },
         GitDependency{
             .url = "https://github.com/nat3Github/zig-lib-tailwind-colors",
-            .branch = "main",
+            .branch = "master",
         },
         GitDependency{
             .url = "https://github.com/nat3Github/zig-lib-image",
             .branch = "main",
         },
         GitDependency{
-            .url = "https://github.com/Arwalk/zig-protobuf",
+            .url = "https://github.com/nat3Github/zig-lib-protobuf-dev-fork",
+            .branch = "master",
+        },
+        GitDependency{
+            .url = "https://github.com/nat3Github/zig-lib-z2d-dev-fork",
             .branch = "main",
         },
     };
@@ -30,7 +34,7 @@ pub fn build(b: *std.Build) !void {
     step.makeFn = update_step;
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    if (true) return;
+    // if (true) return;
 
     const image_module =
         b.dependency("image", .{
@@ -54,23 +58,23 @@ pub fn build(b: *std.Build) !void {
     });
     const z2d_module = z2d_dep.module("z2d");
 
-    const protobuf_dep = b.dependency("protobuf", .{
+    const protobuf_module = b.dependency("protobuf", .{
         .target = target,
         .optimize = optimize,
-    });
-    const protobuf_module = protobuf_dep.module("protobuf");
-    const gen_proto_step = b.step("gen-proto", "generates zig files from protocol buffer definitions");
+    }).module("protobuf");
 
-    const protobuf = @import("protobuf");
-    const protoc_step = protobuf.RunProtocStep.create(b, protobuf_dep.builder, target, .{
-        .destination_directory = b.path("src/decode/vector_tile-proto"),
-        .source_files = &.{
-            "src/decode/vector_tile.proto",
-        },
-        .include_directories = &.{},
-    });
+    // const gen_proto_step = b.step("gen-proto", "generates zig files from protocol buffer definitions");
 
-    gen_proto_step.dependOn(&protoc_step.step);
+    // const protobuf = @import("protobuf");
+    // const protoc_step = protobuf.RunProtocStep.create(b, protobuf_dep.builder, target, .{
+    //     .destination_directory = b.path("src/decode/vector_tile-proto"),
+    //     .source_files = &.{
+    //         "src/decode/vector_tile.proto",
+    //     },
+    //     .include_directories = &.{},
+    // });
+
+    // gen_proto_step.dependOn(&protoc_step.step);
 
     const step_test = b.step("test", "Run All Tests in src/test");
 

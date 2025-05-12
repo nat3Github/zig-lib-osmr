@@ -10,14 +10,22 @@ pub fn get_hash(alloc: Allocator, url: []const u8, branch: []const u8) ![]const 
     var tokenizer = std.mem.tokenizeAny(u8, dat, "\r\n");
     var hash: []const u8 = "";
     const refs_heads = "refs/heads/";
+    var arlist = std.ArrayList([]const u8).init(alloc);
+    defer arlist.deinit();
     while (tokenizer.next()) |token| {
         hash = token[0..40];
-        var ref = std.mem.trimLeft(u8, token[40..], " ");
+        var ref = std.mem.trim(u8, token[40..], " \t");
         if (std.ascii.startsWithIgnoreCase(ref, refs_heads)) ref = ref[refs_heads.len..];
-
-        if (std.mem.eql(u8, branch, ref)) break;
+        if (std.mem.eql(u8, branch, ref)) return alloc.dupe(u8, hash);
+        try arlist.append(ref);
     }
-    return alloc.dupe(u8, hash);
+    const branches = arlist.items;
+    std.log.err("url: {s} BRANCH: '{s}' NOT FOUND", .{ url, branch });
+    std.log.info("there are {} other branches:", .{branches.len});
+    for (branches[0..@min(10, branches.len)]) |s| {
+        std.log.info("{s}", .{s});
+    }
+    return error.BranchNotFound;
 }
 
 pub fn get_zig_fetch_repo_string(alloc: Allocator, url: []const u8, branch: []const u8) ![]const u8 {

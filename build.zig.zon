@@ -16,8 +16,12 @@
             .hash = "image-0.0.0-FDpZou-lAACxPZzf2oAlvnS05DbLEdWZmsFkm9jJibmO",
         },
         .protobuf = .{
-            .url = "git+https://github.com/Arwalk/zig-protobuf#3e55a9a9a9eff6ef8183bcb6dfdf361fdf876449",
-            .hash = "protobuf-0.0.0-AAAAADVmGAC9-mqJEn-4RpqqUPfKXNuAhBX5XdJPqe6d",
+            .url = "git+https://github.com/nat3Github/zig-lib-protobuf-dev-fork#765026c7b29fb8a94e5e5b224fea2dd319ac121e",
+            .hash = "protobuf-2.0.0-0e82agyhGwCidRG1ktCRXulks9P5ZawrK_9OctDfUDe8",
+        },
+        .z2d = .{
+            .url = "git+https://github.com/nat3Github/zig-lib-z2d-dev-fork#46b7fd9a147abbbd9603f5546dbdadbd8f50bdaf",
+            .hash = "z2d-0.6.2-j5P_HorvCgA77zuTJyQcBt0addhqcZ77jV4tsuhB5KQY",
         },
     },
     .paths = .{
