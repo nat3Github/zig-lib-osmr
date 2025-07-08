@@ -20,8 +20,8 @@
             .hash = "protobuf-2.0.0-0e82agyhGwCidRG1ktCRXulks9P5ZawrK_9OctDfUDe8",
         },
         .z2d = .{
-            .url = "git+https://github.com/nat3Github/zig-lib-z2d-dev-fork#e4e23a2f3ba3598c82848bf0f7b3ea80d7ac0cb2",
-            .hash = "z2d-0.6.2-j5P_Hj_6CgADmPGfSOzRwoWRJBS636ZlzEiz7PyN6gdz",
+            .url = "git+https://github.com/nat3Github/zig-lib-z2d-dev-fork#d675aa4833b1581c477c2841cad10903ed58c5a0",
+            .hash = "z2d-0.7.0-j5P_HjnNDACB30ItazCZLrRgWVR2APuLtUrsIA72PYS6",
         },
     },
     .paths = .{
