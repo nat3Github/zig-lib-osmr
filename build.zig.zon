@@ -30,6 +30,7 @@
         "src",
         "LICENSE",
         "README.md",
+        "benchmark.md",
         "update.zig",
     },
 }
