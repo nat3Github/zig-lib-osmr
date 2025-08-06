@@ -3,6 +3,7 @@ const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 const expect = std.testing.expect;
 const z2d = @import("z2d");
+const Z2dContext = root.Z2dContext;
 const root = @import("../root.zig");
 const dec = root.decoder2;
 const com = root.common;
@@ -221,13 +222,14 @@ pub const rend2config = struct {
 };
 
 pub fn render_all(
-    ctx: *z2d.Context,
+    ctx: *Z2dContext,
     data: *const dec.LayerData,
     scale: f32,
     offset_x: f32,
     offset_y: f32,
 ) !void {
-    return com.render_all(ctx, data, rend2config, scale, offset_x, offset_y);
+    try com.render_all(ctx, data, rend2config, scale, offset_x, offset_y);
+    try ctx.finalize();
 }
 pub const DefaultColor = from_hex(Tailwind.lime200);
 
@@ -267,7 +269,7 @@ fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, compti
                 .b = 255,
                 .a = 255,
             } }, alloc, @intCast(width_height), @intCast(width_height));
-            var ctx = z2d.Context.init(alloc, &sfc);
+            var ctx = Z2dContext.init(alloc, &sfc);
             const data = try dec.parse_tile(alloc, &tile);
             try render_all(
                 &ctx,
@@ -277,7 +279,7 @@ fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, compti
                 500,
             );
             // const sfc = try render_tile_leaky(alloc, width_height, width_height, 0, -500, &tile);
-            std.log.warn("time rendering: {d:.3} ms", .{time.lap() / 1_000_000});
+            std.log.warn("TIME rendering: {d:.3} ms", .{time.lap() / 1_000_000});
             try z2d.png_exporter.writeToPNGFile(sfc, output_subpath, .{});
             _ = arena.reset(.retain_capacity);
             // std.log.warn("time png: {d:.3} ms", .{time.lap() / 1_000_000});

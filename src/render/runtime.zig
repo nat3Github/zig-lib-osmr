@@ -3,6 +3,7 @@ const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 const expect = std.testing.expect;
 const z2d = @import("z2d");
+const Z2dContext = root.Z2dContext;
 const root = @import("../root.zig");
 const dec = root.decoder2;
 const Tile = dec.Tile;
@@ -19,7 +20,7 @@ pub const RenderContext = struct {
     offsetx: f32,
     offsety: f32,
     render_fnc: *const fn (
-        *z2d.Context,
+        *Z2dContext,
         *const dec.LayerData,
         f32,
         f32,
@@ -43,7 +44,7 @@ fn render_part(
         @intCast(width),
         @intCast(pixels.len / width),
     );
-    var ctx = z2d.Context.init(alloc, &ssfc);
+    var ctx = Z2dContext.init(alloc, &ssfc, .default) catch return;
     rctx.render_fnc(
         &ctx,
         &rctx.dat,
@@ -70,7 +71,7 @@ pub fn render_tile_mt(
     var sfc = try z2d.Surface.initPixel(.{ .rgba = rctx.initial_px }, alloc, @intCast(img_width), @intCast(img_height));
     time.reset();
     try render_mtex(alloc, pool, &sfc, parts, rctx);
-    std.debug.print("time rendering: {d:.3} ms", .{time.read() / 1_000_000});
+    std.debug.print("\npure render time: {d:.3} ms", .{time.read() / 1_000_000});
     pool.deinit();
     return sfc;
 }
@@ -144,7 +145,7 @@ fn leipzig_new_york_rendering(comptime zoom_level: struct { comptime_int, compti
             var sfc = try render_tile_mt(arena.child_allocator, width_height, width_height, rctx, 1);
             defer sfc.deinit(arena.child_allocator);
 
-            // std.debug.print("time rendering: {d:.3} ms", .{time.lap() / 1_000_000});
+            std.debug.print("\nST rendering: {d:.3} ms ", .{time.lap() / 1_000_000});
             try z2d.png_exporter.writeToPNGFile(sfc, output_subpath, .{});
             _ = arena.reset(.retain_capacity);
         }
@@ -155,7 +156,7 @@ test "single threaded" {
     try leipzig_new_york_rendering(.{ 10, 11 });
 }
 
-test "kkkjll" {
+test "Multi threaded run" {
     // if (true) return;
     std.log.warn("multi threaded:", .{});
     const gpa = std.testing.allocator;
@@ -177,7 +178,6 @@ test "kkkjll" {
         const input = try file.reader().readAllAlloc(alloc, 10 * 1024 * 1024);
         time.reset();
         const tile: dec.Tile = try dec.decode(input, alloc);
-        // std.log.warn("time decoding: {d:.3} ms", .{time.lap() / 1_000_000});
         time.reset();
         const coldef = Color.from_hex(Tailwind.lime200);
         const rctx = RenderContext{
@@ -192,7 +192,7 @@ test "kkkjll" {
         defer sfc.deinit(arena.child_allocator);
 
         // const sfc = try render_tile_leaky(alloc, width_height, width_height, 0, -500, &tile);
-        std.debug.print("time rendering (mt): {d:.3} ms", .{time.lap() / 1_000_000});
+        std.debug.print("\nMT rendering: {d:.3} ms ", .{time.lap() / 1_000_000});
         try z2d.png_exporter.writeToPNGFile(sfc, output_subpath, .{});
         _ = arena.reset(.retain_capacity);
         // std.log.warn("time png: {d:.3} ms", .{time.lap() / 1_000_000});

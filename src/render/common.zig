@@ -3,6 +3,7 @@ const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 const expect = std.testing.expect;
 const z2d = root.z2d;
+const Z2dContext = root.Z2dContext;
 const root = @import("../root.zig");
 const dec = root.decoder2;
 const Tile = dec.Tile;
@@ -43,7 +44,7 @@ pub fn col_to_z2d_pixel_rgb(col: Color) z2dRGBA {
 }
 
 inline fn context_draw(
-    ctx: *z2d.Context,
+    ctx: *Z2dContext,
     offset_x: f32,
     offset_y: f32,
     scale: f32,
@@ -113,7 +114,7 @@ inline fn context_draw(
     ctx.resetPath();
 }
 pub fn render_all(
-    ctx: *z2d.Context,
+    ctx: *Z2dContext,
     data: *const dec.LayerData,
     config: type,
     scale: f32,

@@ -1,5 +1,6 @@
 const std = @import("std");
 pub const common = @import("render/common.zig");
+pub const Z2dContext = z2d.ContextWgpu;
 
 pub const decoder2 = @import("decode/tile-decoder2.zig");
 pub const maptiler = @import("decode/maptiler.zig");
